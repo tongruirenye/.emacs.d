@@ -1,0 +1,12 @@
+(ivy-mode 1)
+(setq ivy-use-virtual-buffers t)
+(global-set-key (kbd "C-c C-r") 'ivy-resume)
+(global-set-key (kbd "C-s") 'swiper)
+(global-set-key (kbd "C-c k") 'counsel-rg)
+
+(require 'subr-x)
+(projectile-mode +1)
+(define-key projectile-mode-map (kbd "s-p") 'projectile-command-map)
+(define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+(setq projectile-completion-system 'default)
+(provide 'setup-ivy)
