@@ -1,4 +1,3 @@
-
 ;;; screen
 (setq inhibit-startup-screen t)
 (if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
@@ -16,15 +15,21 @@
  visible-bell nil
  )
 
+
+(setq make-backup-files nil)
+(which-key-mode 1)
+(electric-pair-mode t)
+
 ;;; font
-(set-default-font "Consolas-12.0")
+(set-default-font "Consolas-14.0")
 (dolist (charset '(kana han cjk-misc bopomofo))
   (set-fontset-font (frame-parameter nil 'font) charset
-                    (font-spec :family "微软雅黑" :size 16)))
+                    (font-spec :family "微软雅黑" :size 20)))
 
 (prefer-coding-system 'utf-8-unix)
 
-;; copy from doom
+
+;; stolen from doom
 (defun +doom-dashboard--center (len s)
   (concat (make-string (ceiling (max 0 (- len (length s))) 2) ? )
           s))
@@ -37,16 +42,12 @@
      (cond ((featurep 'ivy) #'counsel-find-file)
            (#'find-file)))))
 
-
-(defvar my-english-dir "d:/mydata/org/english")
-
 ;;;###autoload
-(defun my/open-english-config ()
-  "Browse my `my-english-dir'."
+(defun my/open-config ()
   (interactive)
-  (unless (file-directory-p my-english-dir)
-    (make-directory my-english-dir t))
-  (doom-project-browse my-english-dir))
+  (unless (file-directory-p my-config-dir)
+    (message "no config dir"))
+  (doom-project-browse my-config-dir))
 
 (defun my/banner ()
   (mapc (lambda (line)
@@ -64,9 +65,6 @@
 	 )))
 
 
-(require 'recentf)
-(recentf-mode 1)
-
 (defun my/menu ()
   (mapc (lambda (btn)
 	  (when btn
@@ -79,10 +77,8 @@
 		  'follow-link t)
 		 (+doom-dashboard--center 68 (buffer-string)))
 	       "\n\n"))))
-	`(("Recently Files" "file-text"
-	   (call-interactively 'recentf-open-files))
-	  ("English Files" "file-text"
-	   (call-interactively 'my/open-english-config))
+	`(("Config Files" "file-text"
+	   (call-interactively 'my/open-config))
 	  )))
 
 
@@ -126,10 +122,6 @@
 (add-hook 'emacs-startup-hook '(lambda () (goto-char (point-min))))
 
 
-(setq make-backup-files nil)
-(which-key-mode 1)
-(electric-pair-mode t)
-
 (require 'doom-themes)
 
 ;; Global settings (defaults)
@@ -144,7 +136,7 @@
 (doom-themes-visual-bell-config)
 
 ;; Enable custom neotree theme (all-the-icons must be installed!)
-;;(doom-themes-neotree-config)
+(doom-themes-neotree-config)
 ;; or for treemacs users
 ;;(doom-themes-treemacs-config)
 
