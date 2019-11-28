@@ -91,9 +91,9 @@
 
 
 ;; drill
-(require 'org-drill)
-(setq org-drill-maximum-items-per-session 60)
-(setq org-drill-maximum-duration 30)
+;;(require 'org-drill)
+;;(setq org-drill-maximum-items-per-session 60)
+;;(setq org-drill-maximum-duration 30)
 
 ;; pomodoro
 (require 'org-pomodoro)
