@@ -102,6 +102,7 @@
   "Send a toast notification on windows 10"
   (apply orig-fun args)
   (call-process-shell-command (apply #'format "powershell -ExecutionPolicy Bypass -File %s %s %s" my-windows-toast-file args) nil "*scratch*")
+  (org-save-all-org-buffers)
   )
 (advice-add 'org-pomodoro-notify :around #'my-org-pomodoro-notify)
 
