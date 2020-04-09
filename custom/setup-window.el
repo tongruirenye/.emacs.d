@@ -1,6 +1,7 @@
 
 ;; stolen from ank-editor
 
+(require 'ox)
 (require 'request)
 
 (defconst my-html-backend
@@ -48,30 +49,30 @@
 
 (provide 'setup-window)
 
-(json-encode '(("action" . "addNode")
-	       ("params" . ("dddd" . ("abc")))))
+;; (json-encode '(("action" . "addNode")
+;; 	       ("params" . ("dddd" . ("abc")))))
 
-(json-read-from-string "{\"action\": false,\"params\": {\"note\": {\"deck\": \"hello\", \"a\": \"b\", \"d\":[\"c\"]}}}")
+;; (json-read-from-string "{\"action\": false,\"params\": {\"note\": {\"deck\": \"hello\", \"a\": \"b\", \"d\":[\"c\"]}}}")
 
-(setq abc "dddd")
+;; (setq abc "dddd")
 
-(json-encode `(("action" . "addNode")
-			  ("version" . 6)
-			  ("params" ("note"
-				     ("dectName" . "Default")
-				     ("modelName" . "Basic")
-				     ("fields"
-				      ("Front" . ,abc)
-				      ("Back" . "back"))
-				     ("options"
-				      ("allowDuplicate" . t))
-				     ("tags" . ["abc"])
-				     ))))
+;; (json-encode `(("action" . "addNode")
+;; 			  ("version" . 6)
+;; 			  ("params" ("note"
+;; 				     ("dectName" . "Default")
+;; 				     ("modelName" . "Basic")
+;; 				     ("fields"
+;; 				      ("Front" . ,abc)
+;; 				      ("Back" . "back"))
+;; 				     ("options"
+;; 				      ("allowDuplicate" . t))
+;; 				     ("tags" . ["abc"])
+;; 				     ))))
 
 
-(org-export-string-as "1. abc"
-		      my-html-backend
-		      t)
+;; (org-export-string-as "1. abc"
+;; 		      my-html-backend
+;; 		      t)
 
 
 	       

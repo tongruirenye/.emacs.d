@@ -10,11 +10,5 @@
 (global-set-key (kbd "C-c d") 'counsel-etags-find-tag-at-point)
 (global-set-key (kbd "C-c o") 'counsel-etags-grep)
 
-(require 'subr-x)
-(projectile-mode +1)
-(define-key projectile-mode-map (kbd "s-p") 'projectile-command-map)
-(define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
-(setq projectile-completion-system 'ivy)
-
 
 (provide 'setup-ivy)

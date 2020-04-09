@@ -15,13 +15,15 @@
  visible-bell nil
  )
 
+(setq-default tab-width 4)
+(setq-default indent-tabs-mode nil)
 
 (setq make-backup-files nil)
 (which-key-mode 1)
 (electric-pair-mode t)
 
 ;;; font
-(set-default-font "Consolas-14.0")
+(set-default-font "JetBrains Mono-13.0")
 (dolist (charset '(kana han cjk-misc bopomofo))
   (set-fontset-font (frame-parameter nil 'font) charset
                     (font-spec :family "微软雅黑" :size 20)))
@@ -29,7 +31,7 @@
 (prefer-coding-system 'utf-8-unix)
 
 
-;; stolen from doom
+;; see doom
 (defun +doom-dashboard--center (len s)
   (concat (make-string (ceiling (max 0 (- len (length s))) 2) ? )
           s))
@@ -136,7 +138,7 @@
 (doom-themes-visual-bell-config)
 
 ;; Enable custom neotree theme (all-the-icons must be installed!)
-(doom-themes-neotree-config)
+;;(doom-themes-neotree-config)
 ;; or for treemacs users
 ;;(doom-themes-treemacs-config)
 
