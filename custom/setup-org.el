@@ -1,5 +1,5 @@
 (setq org-todo-keywords
-      '((sequence "TODO(t)" "INPROGRESS(a)" "|" "DONE(d)")
+      '((sequence "TODO(t)" "INPROGRESS(a)" "WAITING" "|" "DONE(d)")
         (type "TASK" "NOTE" "EVENT" "|" "INBOX")
         ))
 

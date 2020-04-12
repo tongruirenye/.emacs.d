@@ -22,6 +22,8 @@
 (which-key-mode 1)
 (electric-pair-mode t)
 
+(defalias 'list-buffers 'ibuffer)
+
 ;;; font
 (set-default-font "JetBrains Mono-13.0")
 (dolist (charset '(kana han cjk-misc bopomofo))
