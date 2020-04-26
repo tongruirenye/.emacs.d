@@ -1,53 +1,70 @@
-(setq org-todo-keywords
-      '((sequence "TODO(t)" "INPROGRESS(a)" "WAITING" "|" "DONE(d)")
-        (type "TASK" "NOTE" "EVENT" "CAPTURE"  "|" "INBOX")
-        ))
+;;
+;; Org
+;;
+
+(require 'setup-config)
+
+(defun cc-org-todo-trigger-hook (list)
+  (if (equal "DONE" (plist-get list :to))
+      (let* ((org-journal-file-name (org-journal-get-entry-path))
+             (id (org-entry-get (point) "ID"))
+             (content (nth 4 (org-heading-components)))
+             (time (format-time-string "%H:%M "))
+             (org-journal-buffer (find-file-noselect org-journal-file-name))
+             )
+        (save-excursion
+          (save-restriction
+            (with-current-buffer org-journal-buffer
+              (org-journal-new-entry t)
+              (org-insert-heading '(16))
+              (insert "DONE ")
+              (insert time)
+              (insert (format "[[id:%s][%s]]" id content))
+              )))
+        (org-save-all-org-buffers))))
+
+;; Org
+(use-package org
+  :ensure t
+  :bind (("C-c c" . org-capture)
+         ("C-c a" . org-agenda))
+  :init
+  (setq org-directory cc-org-dir)
+  :hook (org-trigger . cc-org-todo-trigger-hook)
+  :config
+  (setq org-todo-keywords '((sequence "TODO(t)" "INPROGRESS(a)" "WAITING" "|" "DONE(d)")
+          (type "TASK" "NOTE" "EVENT" "CAPTURE" "|" "INBOX")))
+  (setq org-todo-keyword-faces
+        '(("TODO" . "red")
+	      ("INPROGRESS" . "spring green")
+	      ("DONE" . "gray")))
+ (setq org-use-fast-todo-selection t
+  org-clock-into-drawer t
+  org-log-into-drawer t
+  org-agenda-block-separator nil
+  org-log-done 'time
+  org-agenda-skip-deadline-prewarning-if-scheduled 3
+  org-archive-location (concat org-directory "archive/archive.org::* From %s")
+  org-agenda-files (directory-files cc-project-dir t "\\w+.org")
+  ))
 
 
-(setq org-todo-keyword-faces
-      '(("TODO" . "red")
-	("INPROGRESS" . "spring green")
-	("DONE" . "gray")))
 
-
-(server-start)
-(require 'org-protocol)
-
-
-	       
-;; (setq org-refile-targets (quote ((nil :todo . "CATEGORY")
-;;                                  (nil :todo . "PROJECT")
-;;                                  (org-agenda-files :todo . "CATEGORY")
-;;                                  (org-agenda-files :todo . "PROJECT"))))
-
-(setq org-use-fast-todo-selection t)
-(setq org-clock-into-drawer t)
-(setq org-log-into-drawer t)
-(setq org-agenda-block-separator nil)
-(setq org-log-done 'time)
-(setq org-agenda-skip-deadline-prewarning-if-scheduled 3)
-
-
-(setq org-archive-location (concat org-directory "archive/archive.org::* From %s"))
-(setq org-agenda-files (directory-files (concat org-directory "project") t "\\w+.org"))
-
-;; journal
-(require 'org-journal)
-(customize-set-variable 'org-journal-dir (concat org-directory "journal/"))
-(setq org-journal-file-type 'daily)
-(setq org-journal-enable-agenda-integration t)
-(defun org-journal-find-location ()
-  ;; Open today's journal, but specify a non-nil prefix argument in order to
-  ;; inhibit inserting the heading; org-capture will insert the heading.
-  (org-journal-new-entry t)
-  ;; Position point on the journal's top-level heading so that org-capture
-  ;; will add the new entry as a child entry.
-  (goto-char (point-min))
-)
-
-;; capture
-(setq org-capture-templates '(("j" "Journal entry" entry (function org-journal-find-location)
-                               "** %^{Title}\n   %()%i%?")
+;; Org Journal
+(use-package org-journal
+  :ensure t
+  :defer t
+  :custom
+  (org-journal-dir cc-journal-dir)
+  (org-journal-file-type 'daily)
+  :config
+  (defun org-journal-find-location ()
+    (org-journal-new-entry t)
+    (goto-char (point-min))
+    )
+  (setq org-journal-enable-agenda-integration t)
+  (setq org-capture-templates '(("j" "Journal entry" entry (function org-journal-find-location)
+                               "** %^{Title}\n   %i%?")
                                ("n" "Note entry" entry (function org-journal-find-location)
                                "** NOTE %(format-time-string org-journal-time-format)%^{Title}\n   %i%?")
                               ("e" "Event entry" entry (function org-journal-find-location)
@@ -57,119 +74,99 @@
                               ("c" "web capture" entry (function org-journal-find-location)
                                "** CAPTURE %(format-time-string org-journal-time-format)%:description\n   [[%:link][%:description]]\n   %:initial\n   " :immediate-finish t)
                               ))
+  )
 
+
+;; protocol
+(use-package org-protocol
+  :ensure t
+  :config
+  (server-start))
 
 
 ;; agenda
-(setq org-agenda-custom-commands
-      '(("d" "Today" agenda
-         (org-super-agenda-mode)
-         ((org-agenda-span 'day)
-	  (org-super-agenda-groups
-           '(
-             (:name "Today Calendar"
-                    :time-grid t
-                    :todo "INPROGRESS")
-             (:name "Today Deadline"
-                :face (:underline t)
-                :deadline today)
-             (:name "Today Scheduled"
-                    :scheduled today)
-             (:habit t)
-             (:discard (:anything t))
-             )))
-         (org-agenda nil "a"))
-	("p" "Dashbord" alltodo
-	 (org-super-agenda-mode)
-	 ((org-super-agenda-groups
-	   '((:name "InProgress Tasks"
-                :todo "INPROGRESS")
-         (:name "Todo Tasks"
-                :todo "TODO")
-         (:name "Inbox"
-		    :face (:underline t)
-            :todo "INBOX")
-	     (:discard (:anything t))
-	     ))))
-	))
-
-
-(defun my-find-note ()
-  (interactive)
-  (let ((default-directory (file-truename (expand-file-name my-note-dir))))
-    (ivy-read "Peek a Note " #'read-file-name-internal
-              ;;:require-match t
-              :action (lambda (x)
-                        (let ((buf)
-                              (exist (file-exists-p x)))
-                          (if exist
-                              (setq buf (find-file-noselect x))
-                            (setq buf (generate-new-buffer x)))
-                          (with-current-buffer buf
-                            (unless (eq major-mode 'org-mode)
-                              (org-mode))
-                            (goto-char (point-max))
-                            (unless exist
-                              (insert "#+STARTUP: showall")
-                              (insert "\n")
-                              (insert "#+TITLE: ")
-                              (insert (file-name-nondirectory (file-name-sans-extension x)))
-                              (insert "\n")
-                              (insert "#+DATE: ")
-                              (org-insert-time-stamp (current-time) nil t)
-                              (insert "\n")
-                              (insert "#+KEYWORDS: "))
-                            )
-                           (pop-to-buffer buf)))
-                        
-              )))
+(use-package org-super-agenda
+  :ensure t
+  :config
+  (setq org-agenda-custom-commands
+        '(("d" "Today" agenda
+           (org-super-agenda-mode)
+           ((org-agenda-span 'day)
+	        (org-super-agenda-groups
+             '(
+               (:name "Today Calendar"
+                      :time-grid t
+                      :todo "INPROGRESS")
+               (:name "Today Deadline"
+                      :face (:underline t)
+                      :deadline today)
+               (:name "Today Scheduled"
+                      :scheduled today)
+               (:habit t)
+               (:discard (:anything t))
+               )))
+           (org-agenda nil "a"))
+	      ("p" "Dashbord" alltodo
+	       (org-super-agenda-mode)
+	       ((org-super-agenda-groups
+	         '((:name "InProgress Tasks"
+                      :todo "INPROGRESS")
+               (:name "Todo Tasks"
+                      :todo "TODO")
+               (:name "Inbox"
+		              :face (:underline t)
+                      :todo "INBOX")
+	           (:discard (:anything t))
+	           ))))
+	      ))
+  )
 
 ;; drill
-(require 'org-drill)
-(setq org-drill-maximum-items-per-session 60)
-(setq org-drill-maximum-duration 30)
+(use-package org-drill
+  :ensure t
+  :config
+  (setq org-drill-maximum-items-per-session 60)
+  (setq org-drill-maximum-duration 30)
+  )
+
 
 ;; pomodoro
-(require 'org-pomodoro)
-(defun my-org-pomodoro-notify (orig-fun &rest args)
-  "Send a toast notification on windows 10"
-  (apply orig-fun args)
-  (call-process-shell-command (apply #'format "powershell -ExecutionPolicy Bypass -File %s %s %s" my-windows-toast-file args) nil "*scratch*")
+(use-package org-pomodoro
+  :ensure t
+  :config
+  (defun cc-org-pomodoro-notify (orig-fun &rest args)
+    "Send a toast notification on windows 10"
+    (apply orig-fun args)
+    (call-process-shell-command (apply #'format "powershell -ExecutionPolicy Bypass -File %s %s %s" cc-windows-toast-file args) nil "*scratch*")
+    )
+  (advice-add 'org-pomodoro-notify :around #'cc-org-pomodoro-notify)
   )
-(advice-add 'org-pomodoro-notify :around #'my-org-pomodoro-notify)
 
-(defun my-org-notify_handler (msg)
-  (let ((m (list "Effort" msg)))
-    (call-process-shell-command (format "powershell -ExecutionPolicy Bypass -File %s %s %s" my-windows-toast-file "Effort" msg) nil "*scratch*")))
-(setq org-show-notification-handler 'my-org-notify_handler)
+(defun cc-clock-in-hook ()
+    (let* ((org-journal-file-name (org-journal-get-entry-path))
+           (id (org-entry-get (point) "ID"))
+           (content (nth 4 (org-heading-components)))
+           (org-journal-buffer (find-file-noselect org-journal-file-name)))
+      (save-excursion
+        (save-restriction
+          (with-current-buffer org-journal-buffer
+            (org-journal-new-entry t)
+            (org-insert-heading '(16))
+            (insert "TASK ")
+            (insert (format-time-string "%H:%M " org-clock-start-time))
+            (insert (format "[[id:%s][%s]]" id content))
+            (org-clock-find-position nil)
+            (insert-before-markers "\n")
+	        (backward-char 1)
+	        (org-indent-line)
+	        (insert org-clock-string " ")
+            (org-insert-time-stamp org-clock-start-time
+					               'with-hm 'inactive)
+            )
+          ))
+      (org-save-all-org-buffers)))
 
-(defun my-clock-in-hook ()
-  (let* ((org-journal-file-name (org-journal-get-entry-path))
-         (id (org-entry-get (point) "ID"))
-         (content (nth 4 (org-heading-components)))
-         (org-journal-buffer (find-file-noselect org-journal-file-name)))
-    (save-excursion
-      (save-restriction
-        (with-current-buffer org-journal-buffer
-          (org-journal-new-entry t)
-          (org-insert-heading '(16))
-          (insert "TASK ")
-          (insert (format-time-string "%H:%M " org-clock-start-time))
-          (insert (format "[[id:%s][%s]]" id content))
-          (org-clock-find-position nil)
-          (insert-before-markers "\n")
-	      (backward-char 1)
-	      (org-indent-line)
-	      (insert org-clock-string " ")
-          (org-insert-time-stamp org-clock-start-time
-					             'with-hm 'inactive)
-          )
-        ))
-    (org-save-all-org-buffers)))
-
-(add-hook 'org-clock-in-hook 'my-clock-in-hook)
-
-(defun my-clock-out-hook ()
+(defun cc-clock-out-hook ()
   (let* ((org-journal-file-name (org-journal-get-entry-path))
          (id (org-entry-get (point) "ID"))
          (content (nth 4 (org-heading-components)))
@@ -212,41 +209,25 @@
     (org-save-all-org-buffers)
     ))
 
-(add-hook 'org-clock-out-hook 'my-clock-out-hook)
-
-(defun my-org-todo-trigger-hook (list)
-  (if (equal "DONE" (plist-get list :to))
-      (let* ((org-journal-file-name (org-journal-get-entry-path))
-             (id (org-entry-get (point) "ID"))
-             (content (nth 4 (org-heading-components)))
-             (time (format-time-string "%H:%M "))
-             (org-journal-buffer (find-file-noselect org-journal-file-name))
-             )
-        (save-excursion
-          (save-restriction
-            (with-current-buffer org-journal-buffer
-              (org-journal-new-entry t)
-              (org-insert-heading '(16))
-              (insert "DONE ")
-              (insert time)
-              (insert (format "[[id:%s][%s]]" id content))
-              )))
-        (org-save-all-org-buffers))))
-
-(add-hook 'org-trigger-hook 'my-org-todo-trigger-hook)
-
-(require 'org-expiry)
-(org-expiry-insinuate)
-(setq org-expiry-inactive-timestamps t)
-
-(defun my-org-refile-copy ()
+;; clock
+(use-package org-clock
+  :ensure t
+  :hook ((org-clock-in . cc-clock-in-hook)
+         (org-clock-out . cc-clock-out-hook))
   )
 
 
-
-(global-set-key "\C-ca" 'org-agenda)
-(global-set-key "\C-cc" 'org-capture)
-
+;; brain
+(use-package org-brain
+  :ensure t
+  :bind (("C-c n" . org-brain-visualize))
+  :init
+  (setq org-brain-path cc-note-dir)
+  :config
+  (setq org-id-track-globally t)
+  ;;(add-hook 'before-save-hook #'org-brain-ensure-ids-in-buffer)
+  (setq org-brain-visualize-default-choices 'all)
+  (setq org-brain-title-max-length 12))
 
 (provide 'setup-org)
 
