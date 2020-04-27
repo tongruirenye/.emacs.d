@@ -20,10 +20,11 @@
 (require 'setup-config)
 (require 'setup-package)
 (require 'setup-environment)
+(require 'setup-window)
 (require 'setup-edit)
 (require 'setup-company)
 (require 'setup-org)
-;;(require 'setup-programming)
+(require 'setup-programming)
 
 (setq gc-cons-threshold 4000000)
 

@@ -79,7 +79,7 @@
 
 ;; protocol
 (use-package org-protocol
-  :ensure t
+  :ensure nil
   :config
   (server-start))
 
@@ -211,7 +211,7 @@
 
 ;; clock
 (use-package org-clock
-  :ensure t
+  :ensure nil
   :hook ((org-clock-in . cc-clock-in-hook)
          (org-clock-out . cc-clock-out-hook))
   )
@@ -228,6 +228,28 @@
   ;;(add-hook 'before-save-hook #'org-brain-ensure-ids-in-buffer)
   (setq org-brain-visualize-default-choices 'all)
   (setq org-brain-title-max-length 12))
+
+;; cal
+(use-package calfw
+  :ensure t
+  :commands cfw:open-calendar-buffer
+  :bind ("C-c m" . open-calendar)
+  :init
+  (use-package calfw-org
+    :ensure t
+    :commands (cfw:open-org-calendar cfw:org-create-source))
+
+  (defun open-calendar ()
+    "Open calendar."
+    (interactive)
+    (unless (ignore-errors
+              (cfw:open-calendar-buffer
+               :contents-sources
+               (list
+                (when org-agenda-files
+                  (cfw:org-create-source "YellowGreen"))
+                )))
+      (cfw:open-calendar-buffer))))
 
 (provide 'setup-org)
 

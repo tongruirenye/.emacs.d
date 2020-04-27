@@ -36,6 +36,7 @@
         dashboard-items '((recents  . 10)
                           (bookmarks . 5))
         dashboard-set-footer t
+        dashboard-footer-icon ""
         dashboard-footer-messages (list (format "Powered by ChenChao, %s" (format-time-string "%Y")))
         )
   :config
