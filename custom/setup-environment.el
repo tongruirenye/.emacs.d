@@ -29,6 +29,7 @@
 
 ;; dashbord
 (use-package dashboard
+  :ensure t
   :init
   (setq dashboard-banner-logo-title "Life Begins at the End of Your Comfort Zone"
         dashboard-center-content t
@@ -44,6 +45,7 @@
 
 ;; theme
 (use-package doom-themes
+  :ensure t
   :config
   (load-theme cc-theme t)
   (doom-themes-visual-bell-config)
@@ -51,6 +53,7 @@
 
 ;; modeline
 (use-package simple-modeline
+  :ensure t
   :config
   (setq simple-modeline--mode-line
   '((:eval

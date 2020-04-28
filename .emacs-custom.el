@@ -8,7 +8,7 @@
     (ol-bbdb ol-bibtex ol-docview ol-eww ol-gnus org-habit ol-info ol-irc ol-mhe org-protocol ol-rmail ol-w3m)))
  '(package-selected-packages
    (quote
-    (avy which-key web-mode use-package simple-modeline request projectile popup org-super-agenda org-pomodoro org-journal org-drill org-brain neotree lsp-ui js2-refactor htmlize flycheck doom-themes dashboard counsel-etags company-web company-lsp company-go company-ctags))))
+    (shackle calfw-org calfw org-clock org-protocol avy which-key web-mode use-package simple-modeline request projectile popup org-super-agenda org-pomodoro org-journal org-drill org-brain neotree lsp-ui js2-refactor htmlize flycheck doom-themes dashboard counsel-etags company-web company-lsp company-go company-ctags))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
