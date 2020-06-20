@@ -13,7 +13,12 @@
   :type 'string)
 
 (defcustom cc-windows-toast-file "C:/Users/chenchao/AppData/Roaming/.emacs.d/misc/notify.ps1"
-  "CC windows toast script for org-pomodoro"
+  "CC toast script for org-pomodoro on windows10"
+  :group 'cc
+  :type 'string)
+
+(defcustom cc-plantuml-jar-file "C:/Users/chenchao/AppData/Roaming/.emacs.d/misc/plantuml.jar"
+  "cc plantuml jar file"
   :group 'cc
   :type 'string)
 
@@ -29,6 +34,11 @@
 
 (defcustom cc-journal-dir (concat cc-org-dir "journal/")
   "CC journal dir"
+  :group 'cc
+  :type 'string)
+
+(defcustom cc-bullet-agenda-file (concat cc-project-dir "agenda.org")
+  "CC bullet agenda file"
   :group 'cc
   :type 'string)
 

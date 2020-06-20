@@ -22,7 +22,7 @@
   :init
   (setq read-process-output-max (* 1024 1024))
   (setq lsp-keymap-prefix "C-c l"
-        lsp-auto-guess-root t
+        lsp-auto-guess-root nil
         lsp-flycheck-live-reporting nil
         lsp-keep-workspace-alive nil
         lsp-prefer-capf t

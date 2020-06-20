@@ -19,21 +19,6 @@
   :hook ((after-init . ivy-mode)
          (ivy-mode . counsel-mode)))
 
-;; avy
-(use-package avy
-  :ensure t
-  :bind (("C-:" . avy-goto-char)
-         ("C-'" . avy-goto-char-2)
-         ("M-g f" . avy-goto-line)
-         ("M-g w" . avy-goto-word-1)
-         ("M-g e" . avy-goto-word-0))
-  :hook (after-init . avy-setup-default)
-  :config (setq avy-all-windows nil
-                avy-all-windows-alt t
-                avy-background t
-                avy-style 'pre))
-
-
 ;; linenum
 (use-package display-line-numbers
   :hook (prog-mode . display-line-numbers-mode))
@@ -44,6 +29,7 @@
 
 ;; which-key
 (use-package which-key
+  :ensure t
   :hook (after-init . which-key-mode))
 
 ;; elec-pair
