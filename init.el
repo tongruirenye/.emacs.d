@@ -24,7 +24,7 @@
 (require 'setup-edit)
 (require 'setup-company)
 (require 'setup-org)
-;;(require 'setup-programming)
+(require 'setup-programming)
 
 (setq gc-cons-threshold 4000000)
 
