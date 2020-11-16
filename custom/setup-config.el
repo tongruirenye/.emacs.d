@@ -32,13 +32,13 @@
   :group 'cc
   :type 'string)
 
-(defcustom cc-journal-dir (concat cc-org-dir "journal/")
+(defcustom cc-read-file (concat cc-project-dir "personal.org")
   "CC journal dir"
   :group 'cc
   :type 'string)
 
-(defcustom cc-bullet-agenda-file (concat cc-project-dir "agenda.org")
-  "CC bullet agenda file"
+(defcustom cc-roam-dir (concat cc-org-dir "roam/")
+  "CC roam dir"
   :group 'cc
   :type 'string)
 
@@ -64,13 +64,12 @@
                       (list 'const :tag (symbol-name (car item)) (car item)))
                     cc-package-archives-list)))
 
-(defcustom cc-theme 'doom-one
+(defcustom cc-theme 'doom-one-light
   "CC theme"
   :group 'cc
   :type '(choice
           (const :tag "Doom One" doom-one)
           (const :tag "Doom One light" doom-one-light)))
-
 
 ;;;###autoload
 (defun cc-project-browse (dir)

@@ -3,88 +3,24 @@
 ;;
 
 (require 'setup-config)
-(require 'org-id)
 (require 'org-clock)
-(require 'org-journal)
-
-(defun cc-org-todo-trigger-hook (list)
-  (when (equal "DONE" (plist-get list :to))
-    (let ((journal-file (org-journal--get-entry-path))
-          (id (org-entry-get-with-inheritance "ID"))
-          (ca (org-entry-get-with-inheritance "CATEGORY"))
-          (content (nth 4 (org-heading-components)))
-          (time (format-time-string "%H:%M "))
-          )
-        (save-excursion
-          (with-current-buffer (find-file-noselect journal-file)
-            (org-journal-new-entry t)
-            (org-insert-heading '(16))
-            (insert "COMPLETE ")
-            (insert time)
-            (insert content)
-            (org-entry-put (point) "TCATEGORY" ca)
-            (org-entry-put (point) "TID" id)
-            ))
-        (org-save-all-org-buffers)))
-  (when (equal "DEFER" (plist-get list :to))
-    (let ((journal-file (org-journal--get-entry-path))
-          (id (org-entry-get-with-inheritance "ID"))
-          (ca (org-entry-get-with-inheritance "CATEGORY"))
-          (content (nth 4 (org-heading-components)))
-          (time (format-time-string "%H:%M "))
-          )
-        (save-excursion
-          (with-current-buffer (find-file-noselect journal-file)
-            (org-journal-new-entry t)
-            (org-insert-heading '(16))
-            (insert "DEFER ")
-            (insert time)
-            (insert content)
-            (org-entry-put (point) "TCATEGORY" ca)
-            (org-entry-put (point) "TID" id)
-            ))
-        (org-todo "TODO")
-        (org-save-all-org-buffers)))
-  (when (equal "CLOCKIN" (plist-get list :to))
-    (let ((journal-file (org-journal--get-entry-path))
-          (id (org-entry-get-with-inheritance "ID"))
-          (ca (org-entry-get-with-inheritance "CATEGORY"))
-          (content (nth 4 (org-heading-components)))
-          (time (format-time-string "%H:%M "))
-          )
-        (save-excursion
-          (with-current-buffer (find-file-noselect journal-file)
-            (org-journal-new-entry t)
-            (org-insert-heading '(16))
-            (insert "CLOCKIN ")
-            (insert time)
-            (insert content)
-            (org-entry-put (point) "TCATEGORY" ca)
-            (org-entry-put (point) "TID" id)
-            ))
-        (org-todo "TODO")
-        (org-save-all-org-buffers))))
-
-
 
 
 ;; Org
 (use-package org
   :ensure t
-  :bind (("C-c c" . org-capture)
-         ("C-c a" . org-agenda))
+  :bind (("C-c a" . org-agenda))
   :init
   (setq org-directory cc-org-dir)
-  :hook ((org-trigger . cc-org-todo-trigger-hook))
   :config
   ;;(add-hook 'org-agenda-mode-hook 'org-agenda-follow-mode)
-  (setq org-todo-keywords '((sequence "TODO(t)" "ACTIVE(a)" "WAITING" "|" "DONE(d)")
-          (type "POMODORO" "JOURNAL" "PROJ(p)"  "REVIEW" "IDEA" "CLOCKIN"  "NOTE" "DATA" "INBOX" "DEFER"  "|" "COMPLETE")))
+  (setq org-todo-keywords '((sequence "TODO(t)" "ACTIVE(a)" "WAIT(w)" "|" "DONE(d)")
+          (type "POMO" "JOURNAL" "PROJ" "EVENT" "NOTE" "DATA" "INBOX" "|" "COMPLETE")))
   (setq org-todo-keyword-faces
         '(("TODO" . "red")
           ("PROJ" . "red")
 	      ("ACTIVE" . "spring green")
-          ("POMODORO" . "tomato")
+          ("POMO" . "tomato")
           ("NOTE" . "chocolate")
 	      ("DONE" . "gray")))
  (setq org-use-fast-todo-selection t
@@ -104,146 +40,162 @@
   ))
 
 
-(defun cc-note-ref()
-  (let (abc)
-    (ivy-read "Choose a Ref:" '("你就是极客！软件开发人员生存指南" "A(7)" "B(5)" "C(3)" "D(1)")
-              :action (lambda (w)
-                        (cond
-                         ((equal w "你就是极客！软件开发人员生存指南" )
-                          (setq abc ":PROPERTIES:
-   :AUTHOR: Michael Lopp
-   :FROM: 你就是极客！软件开发人员生存指南
-   :END:")
-                          ))
-                        ))
-    abc))
-
-(defun cc-review-tpl()
-  "review tpl"
-  "备忘：
-   - [ ] 学习
-   - [ ] 健康
-   - [ ] 家庭
-   - [ ] 阅读
-   - [ ] 项目
 
 
-   随记：
-")
+;; Org Roam
+(use-package org-roam
+      :ensure t
+      ;;:hook
+      ;;(after-init . org-roam-mode)
+      :custom
+      (org-roam-directory cc-roam-dir)
+      :config
+      (setq org-roam-completion-system 'ivy)
+      (setq org-roam-dailies-directory "daily/")
+      
+      (defun cc-parse-read-option ()
+        (let ((rlist '())
+              name
+              choose)
+          (with-current-buffer (find-file-noselect cc-read-file)
+            (org-map-entries (lambda ()
+                               (setq name (org-entry-get (point) "NAME"))
+                               (when name
+                                 (push name rlist)))
+                             "TODO=\"PROJ\""))
+          (ivy-read "Choose a Book" rlist
+                    :action (lambda (b)
+                              (setq choose b)))
+          choose))
+      (setq org-roam-dailies-capture-templates
+            '(("d" "default" entry
+               #'org-roam-capture--get-point
+               "* %(format-time-string \"%H:%M\" (current-time)) %?"
+               :file-name "daily/%<%Y-%m-%d>"
+               :head "#+title: %<%Y-%m-%d>\n#+STARTUP: showall\n\n")
+              ("r" "book clock in" entry
+               #'org-roam-capture--get-point
+               "* %(format-time-string \"%H:%M\" (current-time)) %(cc-parse-read-option) %?"
+               :file-name "daily/%<%Y-%m-%d>"
+               :head "#+title: %<%Y-%m-%d>\n#+STARTUP: showall\n\n")))
+      
+      :bind (:map org-roam-mode-map
+              (("C-c n l" . org-roam)
+               ("C-c n f" . org-roam-find-file)
+               ("C-c n d" . org-roam-dailies-capture-today)
+               ("C-c n g" . org-roam-graph))
+              :map org-mode-map
+              (("C-c n i" . org-roam-insert))
+              (("C-c n I" . org-roam-insert-immediate))))
 
-(defun cc-data-money-tpl()
-  "money data tpl"
-  ":PROPERTIES:
-   :KIND: money
-   :OUTPUT: 
-   :INPUT: 
-   :END:")
-
-
-;; Org Journal
-(use-package org-journal
+;; Org Roam Server
+(use-package org-roam-server
   :ensure t
-  :custom
-  (org-journal-dir cc-journal-dir)
-  (org-journal-file-type 'daily)
   :config
-  (defun org-journal-find-location ()
-    (org-journal-new-entry t)
-    (goto-char (point-min))
-    )
-  (setq org-journal-enable-agenda-integration t)
-   (setq org-capture-templates '(("j" "Journal entry" entry (function org-journal-find-location)
-                               "** JOURNAL %(format-time-string org-journal-time-format)%^{Title}\n   %i%?")
-                               ("n" "Note entry" entry (function org-journal-find-location)
-                               "** NOTE %(format-time-string org-journal-time-format)%^{Title}\n   %(cc-note-ref)\n %?")
-                              ("t" "Task entry" entry (function org-journal-find-location)
-                               "** TODO %(format-time-string org-journal-time-format)%^{Title}\n   %i%?")
-                              ("r" "Review entry" entry (function org-journal-find-location)
-                               "** REVIEW %(format-time-string org-journal-time-format)%^{Title}\n   %(cc-review-tpl)\n")
-                              ("d" "Data entry" entry (function org-journal-find-location)
-                               "** DATA %(format-time-string org-journal-time-format)记账\n   %(cc-data-money-tpl)\n")
-                              ("c" "Web entry" entry (function org-journal-find-location)
-                               "** INBOX %:description\n   :PROPERTIES:\n   :SOURCE: [[%:link][%:description]]\n   :END:\n   %?" :immediate-finish t)
-                              ))
-   )
+  (setq org-roam-server-host "127.0.0.1"
+        org-roam-server-port 8080
+        org-roam-server-authenticate nil
+        org-roam-server-export-inline-images t
+        org-roam-server-serve-files nil
+        ;;org-roam-server-served-file-extensions '("pdf" "mp4" "ogv")
+        ;;org-roam-server-network-poll t
+        ;;org-roam-server-network-arrows nil
+        org-roam-server-network-label-truncate t
+        org-roam-server-network-label-truncate-length 60
+        org-roam-server-network-label-wrap-length 20))
 
 ;; protocol
 (use-package org-protocol
   :ensure nil
   :config
   (server-start))
+(require 'org-roam-protocol)
+
+
+(defun cc-open-roam ()
+  (interactive)
+  (org-roam-mode)
+  (org-roam-server-mode))
+
+;; roam auto daily capture
+(defun cc-org-auto-roam-dailies-capture ()
+  (unless org-roam-mode (org-roam-mode))
+  (let ((org-roam-capture-templates (--> '(("d" "default" entry
+               #'org-roam-capture--get-point
+               "* %c%?"
+               :immediate-finish t
+               :file-name "daily/%<%Y-%m-%d>"
+               :head "#+title: %<%Y-%m-%d>\n#+STARTUP: showall\n\n"))))
+        (org-roam-capture--info (list (cons 'time (current-time))))
+        (org-roam-capture--context 'dailies))
+    ;;(setq org-roam-capture-additional-template-props (list :finalize 'find-file))
+    (org-roam-capture--capture (when nil '(4)))))
 
 (defun cc-clock-in-hook ()
-  (let ((org-journal-file-name (org-journal--get-entry-path))
-         (id (org-entry-get-with-inheritance "ID"))
-         (content (nth 4 (org-heading-components))))
-    (save-excursion
-      (with-current-buffer  (find-file-noselect org-journal-file-name)
-        (org-journal-new-entry t)
-        (org-insert-heading '(16))
-        (insert "POMODORO ")
-        (insert (format-time-string "%H:%M " org-clock-start-time))
-        (insert content)
-        (org-entry-put (point) "TID" id)
-        (org-clock-find-position nil)
-        (insert-before-markers "\n")
-        (backward-char 1)
-        (org-indent-line)
-        (insert org-clock-string " ")
-        (org-insert-time-stamp org-clock-start-time
-                               'with-hm 'inactive)
-        )
-      )
-    (call-process-shell-command (apply #'format "MiniPomodoro.exe \"%s\"" (list content)) nil 0)
+  (let ((pomo (or (org-entry-get-with-inheritance "POMO") "GAME")))
+    (call-process-shell-command (apply #'format "MiniPomodoro.exe \"%s\"" (list pomo)) nil 0)
     (org-save-all-org-buffers)))
 
-(defun cc-clock-out-hook ()
-  (let* ((org-journal-file-name (org-journal--get-entry-path))
-        (time (format-time-string "%H:%M " org-clock-start-time))
-        (title (concat "** POMODORO " time)))
-    (save-excursion
-      (with-current-buffer (find-file-noselect org-journal-file-name)
-        (org-journal-new-entry t)
-        (goto-char (point-min))
-        (org-map-entries (lambda ()
-                           (if (looking-at title)
-                               (let (ts
-                                     te
-                                     s
-                                     h
-                                     m)
-                                 (org-clock-find-position t)
-                                 (if (and (looking-at (concat "[ \t]*" org-keyword-time-regexp))
-                                          (equal (match-string 1) org-clock-string))
-                                     (setq ts (match-string 2))
-                                   (if fail-quietly (throw 'exit nil) (error "Clock start time is gone")))
-                                 (goto-char (match-end 0))
-                                 (delete-region (point) (point-at-eol))
-                                 (insert "--")
-                                 (setq te (org-insert-time-stamp org-clock-out-time 'with-hm 'inactive))
-                                 (setq s (org-time-convert-to-integer
-                                          (time-subtract
-                                           (org-time-string-to-time te)
-                                           (org-time-string-to-time ts)))
-                                       h (floor s 3600)
-                                       m (floor (mod s 3600) 60))
-                                 (insert " => " (format "%2d:%02d" h m))
-                                 ))
-                           ) "TODO=\"POMODORO\"")))
+(defun cc-clock-out-hook()
+  (let ((category (org-entry-get-with-inheritance "CATEGORY"))
+        (title (nth 4 (org-heading-components)))
+        ts
+        te
+        s
+        h
+        m)
+    (with-temp-buffer
+      (org-mode)
+      (insert "* POMO ")
+      (insert (format-time-string "%H:%M " org-clock-start-time))
+      (insert title)
+      (org-entry-put (point) "KIND" category)
+      (org-clock-find-position nil)
+      (insert-before-markers "\n")
+      (backward-char 1)
+      (org-indent-line)
+      (insert org-clock-string " ")
+      (setq ts (org-insert-time-stamp org-clock-start-time
+                             'with-hm 'inactive))
+      (insert "--")
+      (setq te (org-insert-time-stamp org-clock-out-time 'with-hm 'inactive))
+      (setq s (org-time-convert-to-integer
+               (time-subtract
+                (org-time-string-to-time te)
+                (org-time-string-to-time ts)))
+            h (floor s 3600)
+            m (floor (mod s 3600) 60))
+      (insert " => " (format "%2d:%02d" h m))
+      (goto-char (point-min))
+      (delete-char 2)
+      (kill-ring-save (point-min) (point-max))
+      (cc-org-auto-roam-dailies-capture))
     (org-save-all-org-buffers)))
+
+(defun cc-org-todo-trigger-hook (list)
+  (when (equal "DONE" (plist-get list :to))
+    (let ((ca (org-entry-get-with-inheritance "CATEGORY"))
+          (content (nth 4 (org-heading-components)))
+          (time (format-time-string "%H:%M "))
+          )
+      (with-temp-buffer
+        (org-mode)
+        (insert "* COMPLETE " )
+        (insert time)
+        (insert content)
+        (org-entry-put (point) "KIND" ca)
+        (goto-char (point-min))
+        (delete-char 2)
+        (kill-ring-save (point-min) (point-max))
+        (cc-org-auto-roam-dailies-capture))
+      (org-save-all-org-buffers))))
 
 ;; pomodoro
 (use-package org-pomodoro
   :ensure t
   :hook ((org-clock-in . cc-clock-in-hook)
-         (org-clock-out . cc-clock-out-hook))
-  :config
-  (defun cc-org-pomodoro-notify (orig-fun &rest args)
-    "Send a toast notification on windows 10"
-    (apply orig-fun args)
-    (call-process-shell-command (apply #'format "powershell -ExecutionPolicy Bypass -File %s %s %s" cc-windows-toast-file args) nil "*scratch*")
-    )
-  (advice-add 'org-pomodoro-notify :around #'cc-org-pomodoro-notify)
+         (org-clock-out . cc-clock-out-hook)
+         (org-trigger . cc-org-todo-trigger-hook))
   )
 
 ;; agenda
@@ -251,37 +203,55 @@
   :ensure t
   :config
   (setq org-agenda-custom-commands
-      '(("d" "Dashbord" agenda
+      '(("d" "Today" agenda
          (org-super-agenda-mode)
          ((org-agenda-span 'day)
 	  (org-super-agenda-groups
-           '(
+       '(
+         (:name "Active"
+                :todo "ACTIVE")
              (:name "Highlight"
 		    :face (:underline t)
                     :tag "HIGHLIGHT")
-             (:name "Today Calendar"
+             (:name "Calendar"
                     :time-grid t)
-	     (:name "Today Schedule"
-		    :scheduled today)
-	     (:name "Over Schedule"
-		    :scheduled past)
-             (:name "Over Due"
-		    :deadline past)
-	     (:name "Due Future"
-		        :deadline future)
+	     (:name "Schedule"
+		        :scheduled today
+                :deadline today)
+	     (:name "Over"
+		        :scheduled past
+                :deadline past)
              )))
          (org-agenda nil "a"))
-	("p" "Project" alltodo
+	("p" "Dashbord" alltodo
 	 (org-super-agenda-mode)
 	 ((org-super-agenda-groups
 	   '(
-	     (:name "Inprogress Project"
-		    :children "ACTIVE")
-	     (:name "All Project"
-		    :children t)
+         (:name "All Project"
+		        :todo "PROJ")
+	     (:name "Inprogress"
+		        :todo "ACTIVE"
+                :scheduled past)
+         (:name "Today"
+                :and (:todo "TODO" :scheduled today)
+                :and (:todo "TODO" :deadline today)
+                )
+         (:name "Deadline"
+                :deadline past)
+         (:name "Future"
+                :scheduled future
+                :deadline future)
+         (:name "Todo-read"
+                :and (:category "阅读" :todo "TODO"))
+         (:name "Todo-work"
+                :and (:category "工作" :todo "TODO"))
+         (:name "Inbox"
+                :category "收集箱")
 	     (:discard (:anything t))
 	     ))))
 	)))
+
+
 
 (provide 'setup-org)
 

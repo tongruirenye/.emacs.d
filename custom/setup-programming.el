@@ -57,7 +57,4 @@
   :hook ((js2-mode . js2-imenu-extras-mode)
          (js2-mode . js2-highlight-unused-variables-mode)))
 
-(use-package vue-mode
-  :ensure t)
-
 (provide 'setup-programming)
