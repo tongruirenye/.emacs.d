@@ -73,6 +73,21 @@
                "* %(format-time-string \"%H:%M\" (current-time)) %?"
                :file-name "daily/%<%Y-%m-%d>"
                :head "#+title: %<%Y-%m-%d>\n#+STARTUP: showall\n\n")
+              ("t" "todo" entry
+               #'org-roam-capture--get-point
+               "* TODO %?\n  %u"
+               :file-name "daily/%<%Y-%m-%d>"
+               :head "#+title: %<%Y-%m-%d>\n#+STARTUP: showall\n\n")
+              ("o" "opinion" entry
+               #'org-roam-capture--get-point
+               "* OPINION %?\n  %u"
+               :file-name "daily/%<%Y-%m-%d>"
+               :head "#+title: %<%Y-%m-%d>\n#+STARTUP: showall\n\n")
+              ("i" "IDEA" entry
+               #'org-roam-capture--get-point
+               "* IDEA %?\n  %u"
+               :file-name "daily/%<%Y-%m-%d>"
+               :head "#+title: %<%Y-%m-%d>\n#+STARTUP: showall\n\n")
               ("r" "book clock in" entry
                #'org-roam-capture--get-point
                "* %(format-time-string \"%H:%M\" (current-time)) %(cc-parse-read-option) %?"
@@ -250,6 +265,39 @@
 	     (:discard (:anything t))
 	     ))))
 	)))
+
+
+(defun cc-remove-drawer-at (pos)
+  "Remove an  drawer at position POS.
+POS may also be a marker."
+  (with-current-buffer (if (markerp pos) (marker-buffer pos) (current-buffer))
+    (org-with-wide-buffer
+     (goto-char pos)
+     (let ((drawer (org-element-at-point)))
+       (when (and (memq (org-element-type drawer) '(drawer property-drawer))
+		  (org-element-property :contents-begin drawer))
+	 (delete-region (org-element-property :begin drawer)
+			(progn (goto-char (org-element-property :end drawer))
+			       (skip-chars-backward " \r\t\n")
+			       (forward-line)
+			       (point))))))))
+
+(defun cc-clock-remove-clock-drawer ()
+  "Remove clock drawers in current subtree."
+  (interactive)
+  (save-excursion
+    (org-back-to-heading t)
+    (org-map-tree
+     (lambda ()
+       (let ((drawer (org-clock-drawer-name))
+	     (case-fold-search t))
+	 (when drawer
+	   (let ((re (format "^[ \t]*:%s:[ \t]*$" (regexp-quote drawer)))
+		 (end (save-excursion (outline-next-heading))))
+	     (while (re-search-forward re end t)
+	       (cc-remove-drawer-at (point))))))))))
+
+(add-hook 'org-clock-out-hook 'cc-clock-remove-clock-drawer)
 
 
 
