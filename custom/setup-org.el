@@ -300,6 +300,10 @@ POS may also be a marker."
 (add-hook 'org-clock-out-hook 'cc-clock-remove-clock-drawer)
 
 
+(use-package org-edna
+  :ensure t
+  :hook (after-init . org-edna-mode))
+
 
 (provide 'setup-org)
 

@@ -22,7 +22,7 @@
   :group 'cc
   :type 'string)
 
-(defcustom cc-project-dir (concat cc-org-dir "project/")
+(defcustom cc-project-dir (concat cc-org-dir "roam/project/")
   "CC project dir"
   :group 'cc
   :type 'string)
