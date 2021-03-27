@@ -14,12 +14,12 @@
   (setq org-directory cc-org-dir)
   :config
   ;;(add-hook 'org-agenda-mode-hook 'org-agenda-follow-mode)
-  (setq org-todo-keywords '((sequence "TODO(t)" "ACTIVE(a)" "WAIT(w)" "|" "DONE(d)")
+  (setq org-todo-keywords '((sequence "TODO(t)" "NEXT(n)"  "INPROGRESS(a)"  "|" "DONE(d)")
           (type "POMO" "JOURNAL" "PROJ" "EVENT" "NOTE" "DATA" "INBOX" "|" "COMPLETE")))
   (setq org-todo-keyword-faces
         '(("TODO" . "red")
           ("PROJ" . "red")
-	      ("ACTIVE" . "spring green")
+	      ("INPROGRESS" . "spring green")
           ("POMO" . "tomato")
           ("NOTE" . "chocolate")
 	      ("DONE" . "gray")))
@@ -34,8 +34,8 @@
   org-agenda-files (directory-files cc-project-dir t "\\.org")
   org-refile-targets '((org-agenda-files . (:level . 1)))
   org-clock-in-switch-to-state (lambda (s)
-                                 (if (equal s "TODO")
-                                     "ACTIVE"
+                                 (if (or (equal s "TODO") (equal s "NEXT"))
+                                     "INPROGRESS"
                                    nil))
   ))
 
@@ -53,20 +53,29 @@
       (setq org-roam-completion-system 'ivy)
       (setq org-roam-dailies-directory "daily/")
       
-      (defun cc-parse-read-option ()
-        (let ((rlist '())
-              name
-              choose)
-          (with-current-buffer (find-file-noselect cc-read-file)
-            (org-map-entries (lambda ()
-                               (setq name (org-entry-get (point) "NAME"))
-                               (when name
-                                 (push name rlist)))
-                             "TODO=\"PROJ\""))
-          (ivy-read "Choose a Book" rlist
-                    :action (lambda (b)
-                              (setq choose b)))
-          choose))
+      (setq org-roam-capture-templates
+            '(("d" "default" plain (function org-roam-capture--get-point)
+               "%?"
+               :file-name "%<%Y%m%d%H%M%S>-${slug}"
+               :head "#+title: ${title}\n#+roam_alias:\n#+roam_tags:\n"
+               :unnarrowed t)
+              ("p" "project" plain (function org-roam-capture--get-point)
+               "%?"
+               :file-name "project/${slug}"
+               :head "#+title: ${title}\n"
+               :unnarrowed t)
+              ("b" "blog" plain (function org-roam-capture--get-point)
+               "%?"
+               :file-name "blog/${slug}"
+               :head "#+title: ${title}\n"
+               :unnarrowed t)
+              ("e" "english" plain (function org-roam-capture--get-point)
+               "%?"
+               :file-name "english/${slug}"
+               :head "#+title: ${title}\n"
+               :unnarrowed t)
+              ))
+      
       (setq org-roam-dailies-capture-templates
             '(("d" "default" entry
                #'org-roam-capture--get-point
@@ -83,17 +92,16 @@
                "* OPINION %?\n  %u"
                :file-name "daily/%<%Y-%m-%d>"
                :head "#+title: %<%Y-%m-%d>\n#+STARTUP: showall\n\n")
-              ("i" "IDEA" entry
+              ("i" "idea" entry
                #'org-roam-capture--get-point
                "* IDEA %?\n  %u"
                :file-name "daily/%<%Y-%m-%d>"
                :head "#+title: %<%Y-%m-%d>\n#+STARTUP: showall\n\n")
-              ("r" "book clock in" entry
+              ("n" "note" entry
                #'org-roam-capture--get-point
-               "* %(format-time-string \"%H:%M\" (current-time)) %(cc-parse-read-option) %?"
+               "* NOTE %?\n  %u"
                :file-name "daily/%<%Y-%m-%d>"
                :head "#+title: %<%Y-%m-%d>\n#+STARTUP: showall\n\n")))
-      
       :bind (:map org-roam-mode-map
               (("C-c n l" . org-roam)
                ("C-c n f" . org-roam-find-file)
@@ -127,10 +135,6 @@
 (require 'org-roam-protocol)
 
 
-(defun cc-open-roam ()
-  (interactive)
-  (org-roam-mode)
-  (org-roam-server-mode))
 
 ;; roam auto daily capture
 (defun cc-org-auto-roam-dailies-capture ()
@@ -147,7 +151,7 @@
     (org-roam-capture--capture (when nil '(4)))))
 
 (defun cc-clock-in-hook ()
-  (let ((pomo (or (org-entry-get-with-inheritance "POMO") "GAME")))
+  (let ((pomo (or (org-entry-get-with-inheritance "POMO") "FOCUS...")))
     (call-process-shell-command (apply #'format "MiniPomodoro.exe \"%s\"" (list pomo)) nil 0)
     (org-save-all-org-buffers)))
 
@@ -223,17 +227,14 @@
          ((org-agenda-span 'day)
 	  (org-super-agenda-groups
        '(
-         (:name "Active"
-                :todo "ACTIVE")
-             (:name "Highlight"
-		    :face (:underline t)
-                    :tag "HIGHLIGHT")
-             (:name "Calendar"
+         (:name "当前进行中:"
+                :todo "INPROGRESS")
+             (:name "日期:"
                     :time-grid t)
-	     (:name "Schedule"
+	     (:name "今日:"
 		        :scheduled today
                 :deadline today)
-	     (:name "Over"
+	     (:name "过期:"
 		        :scheduled past
                 :deadline past)
              )))
@@ -242,26 +243,24 @@
 	 (org-super-agenda-mode)
 	 ((org-super-agenda-groups
 	   '(
-         (:name "All Project"
+         (:name "项目:"
 		        :todo "PROJ")
-	     (:name "Inprogress"
-		        :todo "ACTIVE"
+	     (:name "进行中的任务:"
+		        :todo "INPROGRESS"
                 :scheduled past)
-         (:name "Today"
+         (:name "今日任务:"
                 :and (:todo "TODO" :scheduled today)
                 :and (:todo "TODO" :deadline today)
                 )
-         (:name "Deadline"
+         (:name "过期任务:"
                 :deadline past)
-         (:name "Future"
+         (:name "将来任务:"
                 :scheduled future
                 :deadline future)
-         (:name "Todo-read"
-                :and (:category "阅读" :todo "TODO"))
-         (:name "Todo-work"
-                :and (:category "工作" :todo "TODO"))
-         (:name "Inbox"
-                :category "收集箱")
+         (:name "下一个任务:"
+                :todo "NEXT")
+         (:name "等待任务:"
+                :todo "TODO")
 	     (:discard (:anything t))
 	     ))))
 	)))
@@ -302,7 +301,23 @@ POS may also be a marker."
 
 (use-package org-edna
   :ensure t
-  :hook (after-init . org-edna-mode))
+  :hook
+  (after-init . org-edna-mode)
+  :config
+  (defun org-edna-action/cc-add-book-statistics! (_last-entry name author kind)
+    (org-insert-subheading '(16))
+    (insert name)
+    (org-entry-put (point) "AUTHOR" author)
+    (org-entry-put (point) "TIME" (format-time-string "%Y-%m-%d" (current-time)))
+    (org-set-tags (list kind))))
+
+(use-package yankpad
+  :ensure t
+  :defer 10
+  :config
+  (bind-key "<f11>" 'yankpad-map)
+  (bind-key "<f12>" 'yankpad-expand)
+  (setq yankpad-default-category "project"))
 
 
 (provide 'setup-org)

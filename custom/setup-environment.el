@@ -20,7 +20,7 @@
  )
 
 ;; font
-(set-face-font 'default "JetBrains Mono-13.0")
+(set-face-font 'default cc-default-font)
 (when *is-win*
   (dolist (charset '(kana han cjk-misc bopomofo))
     (set-fontset-font (frame-parameter nil 'font) charset

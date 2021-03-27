@@ -12,12 +12,12 @@
   :group 'cc
   :type 'string)
 
-(defcustom cc-windows-toast-file "C:/Users/chenchao/AppData/Roaming/.emacs.d/misc/notify.ps1"
-  "CC toast script for org-pomodoro on windows10"
+(defcustom cc-default-font "JetBrains Mono-13.0"
+  "CC default font"
   :group 'cc
   :type 'string)
 
-(defcustom cc-plantuml-jar-file "C:/Users/chenchao/AppData/Roaming/.emacs.d/misc/plantuml.jar"
+(defcustom cc-plantuml-jar-file (expand-file-name (concat user-emacs-directory "misc/plantuml.jar"))
   "cc plantuml jar file"
   :group 'cc
   :type 'string)
@@ -27,13 +27,8 @@
   :group 'cc
   :type 'string)
 
-(defcustom cc-note-dir (concat cc-org-dir "note/")
-  "CC note dir"
-  :group 'cc
-  :type 'string)
-
-(defcustom cc-read-file (concat cc-project-dir "personal.org")
-  "CC journal dir"
+(defcustom cc-blog-dir (concat cc-org-dir "roam/blog/")
+  "CC blog dir"
   :group 'cc
   :type 'string)
 
