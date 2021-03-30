@@ -105,6 +105,7 @@
       :bind (:map org-roam-mode-map
               (("C-c n l" . org-roam)
                ("C-c n f" . org-roam-find-file)
+               ("C-c n c" . org-roam-capture)
                ("C-c n d" . org-roam-dailies-capture-today)
                ("C-c n g" . org-roam-graph))
               :map org-mode-map
