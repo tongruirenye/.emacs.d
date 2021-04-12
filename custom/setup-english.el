@@ -12,10 +12,19 @@
   :group 'cc)
 
 
-(defcustom cc-english-dir (concat cc-org-dir "english/")
+(defcustom cc-english-dir (concat cc-roam-dir "english/")
   "cc english dir"
   :group 'cc-english
   :type 'string)
+
+(defcustom cc-english-resource "d:/laishixiong/"
+  "cc english resource"
+  :group 'cc-english
+  :type 'string)
+
+(defconst cc-english-custom-id "CUSTOM_ID")
+(defconst cc-english-voice-start "VOICE_START")
+(defconst cc-english-voice-duration "VOICE_DURATION")
 
 (defface cc-english--question-face '((t :inherit default :height 4.0))
   "Face used for question"
@@ -311,22 +320,58 @@
       (push item cc-english--drill-queue))))
 
 
+
+;;;
+;;; Make Lesson
+;;;
+
 (defun cc-english-sentence ()
-  "create word link"
   (interactive)
   (let* ((heading (org-heading-components))
-         (sid (org-entry-get (point) "CUSTOM_ID"))
-         )
+         (sid (org-entry-get (point) cc-english-custom-id)))
     (unless sid
       (setq sid (cc-english--id-new "S" (nth 4 heading))))
-    (org-entry-put (point) "VOICE" (format "[[file:../voice/%s.mp3]]" sid))
-    ))
+    (org-entry-put (point) cc-english-voice-start "00")
+    (org-entry-put (point) cc-english-voice-duration "00")))
 
 (defun cc-english-sentence-all ()
   (interactive)
   (save-excursion
     (goto-char (point-min))
     (org-map-entries #'cc-english-sentence)))
+
+(defun cc-english-sentence-play ()
+  (interactive)
+  (let* ((voice-dir (cc-english--get-voice-dir))
+         (voice-start (org-entry-get (point) cc-english-voice-start))
+         (voice-end (org-entry-get (point) cc-english-voice-duration)))
+    (unless voice-dir
+      (error "no voice"))
+    (call-process-shell-command (apply #'format "ffplay.exe -nodisp -noborder -autoexit -i \"%s\" -ss \"%s\" -t \"%s\"" (list voice-dir voice-start voice-end)) nil 0)))
+
+
+;; (defun cc-english-sentence-voice-extract()
+;;   (interactive)
+;;   (let* ((voice-dir (cc-english--get-voice-dir))
+;;          (sid (org-entry-get (point) cc-english-custom-id))
+;;          (output-dir (concat cc-english-resource "sentence/" sid ".mp3"))
+;;         (voice-start (org-entry-get (point) "VOICE_START"))
+;;         (voice-end (org-entry-get (point) "VOICE_DURATION")))
+;;     (print voice-dir)
+;;     (print output-dir)
+;;     (print sid)
+;;     (print (apply #'format "ffmpeg.exe -i \"%s\" -acodec copy -ss \"%s\" -t \"%s\" \"%s\"" (list voice-dir voice-start voice-end output-dir)))
+;;     (when (and sid voice-dir)
+;;       (call-process-shell-command (apply #'format "ffmpeg.exe -i \"%s\" -acodec copy -ss \"%s\" -t \"%s\" \"%s\"" (list voice-dir voice-start voice-end output-dir)) nil 0)
+;;       )
+;;     ))
+
+;; (defun cc-english-sentence-voice-extract-all ()
+;;   (interactive)
+;;   (save-excursion
+;;     (goto-char (point-min))
+;;     (org-map-entries #'cc-english-sentence-voice-extract)))
+
 
 (defun cc-english-sentence-word (&optional arg)
   "create word link"
@@ -375,14 +420,15 @@
                         ))
     ))
 
+
 (defun cc-english--word-open (id)
-  (let ((dir (cc-english--get-dir)))
+  (let ((dir (concat cc-english-dir "/word")))
     (unless dir
-      (error "no english book dir found!!!"))
+      (error "no word dir found!!!"))
     
     (let* ((sid (org-entry-get (point) "CUSTOM_ID"))
            (sent (nth 4 (org-heading-components)))
-           (res (counsel-rg (concat "^\\*\\s" id) (concat cc-english-dir dir "/word")))
+           (res (counsel-rg (concat "^\\*\\s" id) dir))
            )
       (unless sid
         (error "no sentence CUSTOME_ID!!!"))
@@ -391,7 +437,7 @@
           (progn
             (let* ((cards (cc-english--get-card "WORD"))
                   (cdir (concat cc-english-dir dir "/word/"))
-                  (default-directory (file-truename (expand-file-name cdir)))
+                  (default-directory (file-truename (expand-file-name dir)))
                   )
               (if (and cards (listp cards))
                   (ivy-read "Choose Card:" cards
@@ -581,6 +627,20 @@
           (setq dir (car dirl)))
         ))
     dir))
+
+(defun cc-english--get-voice-dir ()
+  (let ((dir)
+        dirl)
+    (save-excursion
+      (widen)
+      (goto-char (point-min))
+      (when (re-search-forward "^#\\+VOICE:" 200 t)
+        (setq dirl (ivy--split-spaces (buffer-substring-no-properties (point) (line-end-position))))
+        (when (and dirl (listp dirl))
+          (setq dir (car dirl))
+          (setq dir (concat cc-english-resource dir)))
+        ))
+    dir))
  
 (defun cc-english--get-card (kind)
   (let ((cards))
@@ -600,14 +660,14 @@
   (let* ((id (or content ""))
          (rnd (md5 (format "%s%s" (random) id)))
          )
-    (format "%s%s" prefix (substring rnd 0 12))
+    (format "%s%s" prefix rnd)
     )
   )
 
 (defun cc-english--id-new (prefix &optional content)
   (let* ((id (or content ""))
          (rnd (md5 (format "%s%s" (random) id)))
-         (cid (format "%s%s" prefix (substring rnd 0 12)))
+         (cid (format "%s%s" prefix rnd))
          )
     (org-entry-put (point) "CUSTOM_ID" cid)
     cid

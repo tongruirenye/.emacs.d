@@ -72,7 +72,7 @@
               ("e" "english" plain (function org-roam-capture--get-point)
                "%?"
                :file-name "english/${slug}"
-               :head "#+title: ${title}\n"
+               :head "#+title: ${title}\n#+GUIDE:\n#+VOICE:\n"
                :unnarrowed t)
               ))
       
@@ -246,15 +246,13 @@
 	   '(
          (:name "项目:"
 		        :todo "PROJ")
-	     (:name "进行中的任务:"
-		        :todo "INPROGRESS"
-                :scheduled past)
          (:name "今日任务:"
-                :and (:todo "TODO" :scheduled today)
-                :and (:todo "TODO" :deadline today)
+                :todo "INPROGRESS"
+                :scheduled today
+                :deadline today
+                :scheduled past
+                :deadline past
                 )
-         (:name "过期任务:"
-                :deadline past)
          (:name "将来任务:"
                 :scheduled future
                 :deadline future)
