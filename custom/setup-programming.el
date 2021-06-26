@@ -10,7 +10,10 @@
   :ensure t
   :commands (lsp-enable-which-key-integration lsp-format-buffer)
   :hook ((go-mode . (lambda ()
-                        (lsp-deferred)))
+                      (lsp-deferred)
+                      (add-hook 'before-save-hook #'lsp-organize-imports t t)))
+         (web-mode . (lambda ()
+                       (lsp-deferred)))
          (lsp-mode . (lambda ()
                        ;; Integrate `which-key'
                        (lsp-enable-which-key-integration)
@@ -56,5 +59,8 @@
                 ("node" . js2-jsx-mode))
   :hook ((js2-mode . js2-imenu-extras-mode)
          (js2-mode . js2-highlight-unused-variables-mode)))
+
+(use-package go-mode
+  :ensure t)
 
 (provide 'setup-programming)

@@ -59,7 +59,7 @@
                       (list 'const :tag (symbol-name (car item)) (car item)))
                     cc-package-archives-list)))
 
-(defcustom cc-theme 'doom-one-light
+(defcustom cc-theme 'doom-opera
   "CC theme"
   :group 'cc
   :type '(choice

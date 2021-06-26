@@ -56,4 +56,9 @@
 (setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)
 
+;; wsl2
+(when *is-linux*
+  (global-set-key (kbd "C-l") 'set-mark-command)
+  (global-set-key (kbd "RET") 'newline-and-indent))
+
 (provide 'setup-edit)
