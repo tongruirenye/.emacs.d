@@ -17,25 +17,15 @@
   :group 'cc
   :type 'string)
 
-(defcustom cc-plantuml-jar-file (expand-file-name (concat user-emacs-directory "misc/plantuml.jar"))
-  "cc plantuml jar file"
+(defcustom cc-shell-script-dir "c:/Users/Moon/scoop/shims/"
+  "CC shell script dir"
   :group 'cc
   :type 'string)
 
-(defcustom cc-project-dir (concat cc-org-dir "roam/project/")
-  "CC project dir"
+(defcustom cc-use-all-the-icons t
+  "CC use all the icons"
   :group 'cc
-  :type 'string)
-
-(defcustom cc-blog-dir (concat cc-org-dir "roam/blog/")
-  "CC blog dir"
-  :group 'cc
-  :type 'string)
-
-(defcustom cc-roam-dir (concat cc-org-dir "roam/")
-  "CC roam dir"
-  :group 'cc
-  :type 'string)
+  :type 'boolean)
 
 (defcustom cc-package-archives-list
   `(,(cons 'melpa `(,(cons "gnu" "https://elpa.gnu.org/packages/")
@@ -59,7 +49,7 @@
                       (list 'const :tag (symbol-name (car item)) (car item)))
                     cc-package-archives-list)))
 
-(defcustom cc-theme 'doom-opera
+(defcustom cc-theme 'doom-one-light
   "CC theme"
   :group 'cc
   :type '(choice

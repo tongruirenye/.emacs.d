@@ -2,7 +2,38 @@
 ;; Programming
 ;;
 
+ ;; project
+(use-package find-file-in-project
+  :ensure t)
+(global-set-key (kbd "C-c p f") 'find-file-in-project)
+(global-set-key (kbd "C-c p d") 'find-file-in-current-directory)
+
+;; protobuf
 (use-package protobuf-mode
+  :ensure t)
+
+;; citre
+(use-package citre
+    :ensure t
+    :bind (("C-x c j" . citre-jump+)
+           ("C-x c k" . citre-jump-back)
+           ("C-x c p" . citre-peek)
+           ("C-x c a" . citre-ace-peek)
+           ("C-x c u" . citre-update-this-tags-file))
+    :init
+    (require 'citre-config)
+    (setq citre-auto-enable-citre-mode-modes '(c++-mode))
+
+    (defun citre-jump+ ()
+      "Jump to the definition of the symbol at point.
+Fallback to `xref-find-definitions'."
+      (interactive)
+      (condition-case _
+          (citre-jump)
+        (error (call-interactively #'xref-find-definitions)))))
+
+;;
+(use-package modern-cpp-font-lock
   :ensure t)
 
 ;; lsp
@@ -12,8 +43,6 @@
   :hook ((go-mode . (lambda ()
                       (lsp-deferred)
                       (add-hook 'before-save-hook #'lsp-organize-imports t t)))
-         (web-mode . (lambda ()
-                       (lsp-deferred)))
          (lsp-mode . (lambda ()
                        ;; Integrate `which-key'
                        (lsp-enable-which-key-integration)
@@ -59,8 +88,5 @@
                 ("node" . js2-jsx-mode))
   :hook ((js2-mode . js2-imenu-extras-mode)
          (js2-mode . js2-highlight-unused-variables-mode)))
-
-(use-package go-mode
-  :ensure t)
 
 (provide 'setup-programming)

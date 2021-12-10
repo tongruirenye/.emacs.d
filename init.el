@@ -23,10 +23,11 @@
 (require 'setup-window)
 (require 'setup-edit)
 (require 'setup-company)
-(require 'setup-org)
-(require 'setup-blog)
-(require 'setup-programming)
+
+(when (display-graphic-p)
+  (require 'setup-org))
+
+(when *is-linux*
+  (require 'setup-programming))
 
 (setq gc-cons-threshold 4000000)
-
-

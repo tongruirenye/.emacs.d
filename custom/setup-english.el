@@ -1,5 +1,5 @@
 ;;
-;; english
+;; English
 ;;
 
 (require 'org)
@@ -18,13 +18,65 @@
   :type 'string)
 
 (defcustom cc-english-resource "d:/laishixiong/"
-  "cc english resource"
+  "cc english resource dir"
   :group 'cc-english
   :type 'string)
 
 (defconst cc-english-custom-id "CUSTOM_ID")
-(defconst cc-english-voice-start "VOICE_START")
-(defconst cc-english-voice-duration "VOICE_DURATION")
+(defconst cc-english-speech-start "SPEECH_START")
+(defconst cc-english-speech-duration "SPEECH_DURATION")
+(defconst cc-english-translation "TRANSLATION")
+(defconst cc-english-speech-re "^#\\+SPEECH:")
+(defconst cc-english-explanation-re "^#\\+EXPLANATION:")
+
+(defun cc-english--split-sentence (str)
+  (let ((len (length str))
+        res
+        (i 0)
+        (j 0))
+    (while (and (string-match "[.,!? ]+" str i)
+                (< i len))
+      (if (>= (- (match-end 0) (match-beginning 0)) 1)
+          (progn
+            (push (substring str i (match-beginning 0)) res)
+            (setq i (match-end 0)))))
+    (when (< i len)
+      (push (substring str i len) res))
+    res))
+
+(defun cc-english--get-speech-dir (re)
+  (let ((dir)
+        dirl)
+    (save-excursion
+      (widen)
+      (goto-char (point-min))
+      (when (re-search-forward re 200 t)
+        (setq dirl (ivy--split-spaces (buffer-substring-no-properties (point) (line-end-position))))
+        (when (and dirl (listp dirl))
+          (setq dir (car dirl))
+          (setq dir (concat cc-english-resource dir)))
+        ))
+    dir))
+
+(defun cc-english--link-create (prefix kind property id)
+  (org-entry-put (point) property (format "[[%s:%s%s]]" kind prefix id)))
+
+
+(defun cc-english--id-gen (prefix &optional content)
+  (let* ((id (or content ""))
+         (rnd (md5 (format "%s%s" (random) id)))
+         )
+    (format "%s%s" prefix rnd)
+    ))
+
+(defun cc-english--id-new (prefix &optional content)
+  (let* ((id (or content ""))
+         (rnd (md5 (format "%s%s" (random) id)))
+         (cid (format "%s%s" prefix rnd))
+         )
+    (org-entry-put (point) cc-english-custom-id cid)
+    cid))
+
 
 (defface cc-english--question-face '((t :inherit default :height 4.0))
   "Face used for question"
@@ -83,7 +135,7 @@
       (insert (format "%s " (propertize question
                                         'face 'cc-english--question-face
                                         'mouse-face 'mode-line-highlight
-                                        'help-echo (format "https://en.wikipedia.org/wiki/%s" question))))
+                                        'help-echo (format "[[SID:%s]]" question))))
       (setq end (point))
       (put-text-property beg end 'question question)
       (put-text-property beg end 'indent indent))
@@ -105,6 +157,8 @@
         entry
         voice
         voice-path
+        voice-start
+        voice-duration
         cmd)
     (unless question
       (error "no question"))
@@ -116,18 +170,15 @@
       )
     (unless entry
       (error "no entry"))
-    (setq voice (plist-get entry :voice))
+    (setq voice (plist-get entry :speech))
+    (setq voice-start (plist-get entry :speech-start))
+    (setq voice-duration (plist-get entry :speech-duration))
     (unless voice
       (setq voice ""))
-    (string-match "\\[\\[file:\\(.*\\)\\]\\]" voice)
-    (setq voice-path (match-string 1 voice))
-    (unless voice-path
-      (error "no voice"))
-    (setq voice-path (concat cc-english-dir "laishixiong" (string-trim-left voice-path "..")))
-    (when (file-exists-p voice-path)
-      (setq voice-path (subst-char-in-string ?/ ?\\ voice-path))
-    (setq cmd (format "vlc.exe --qt-start-minimized --play-and-exit --qt-notification=0 %s" voice-path))
-    (call-process-shell-command cmd nil 0))
+    ;; (when (file-exists-p voice-path)
+    ;;   (setq voice-path (subst-char-in-string ?/ ?\\ voice-path))
+    (setq cmd (format "ffplay.exe -nodisp -noborder -autoexit -i \"%s\" -ss %s -t %s" voice-path voice-start voice-duration))
+    (call-process-shell-command cmd nil 0)
     ))
 
 (defun cc-english--drill-input ()
@@ -262,15 +313,11 @@
 
 (defun cc-english-drill ()
   (interactive)
-  (let ((dir (cc-english--get-dir))
-        (bufname (concat (buffer-file-name) ".drill"))
+  (let ((dir (concat cc-english-dir "drill/" (buffer-name) ".drill"))
         )
-    (unless dir
-      (error "no english book dir found!!!"))
-    
     (setq cc-english--drill-session nil)
-    (when (file-exists-p bufname)
-      (let ((buffer (find-file-noselect bufname)))
+    (when (file-exists-p dir)
+      (let ((buffer (find-file-noselect dir)))
         (with-current-buffer buffer
           (org-mode)
           (org-map-entries
@@ -290,7 +337,7 @@
     (cc-english--drill-entry (nth cc-english--drill-current cc-english--drill-queue))
     (setq cc-english--drill-current (1+ cc-english--drill-current))
   ))
-
+(global-set-key (kbd "C-c m d") 'cc-english-drill)
 
 
 (defun cc-english--drill-item-session (session)
@@ -306,23 +353,25 @@
   ))
 
 (defun cc-english--drill-item-queue ()
-  (let ((id (org-entry-get (point) "CUSTOM_ID"))
+  (let ((id (org-entry-get (point) cc-english-custom-id))
         (heading (nth 4 (org-heading-components)))
-        (voice (org-entry-get (point) "VOICE"))
-        (trans (org-entry-get (point) "TRANS"))
-        ;;(props (org-entry-properties))
+        (speech-start (org-entry-get (point) cc-english-speech-start))
+        (speech-duration (org-entry-get (point) cc-english-speech-duration))
+        (trans (org-entry-get (point) cc-english-translation))
         item)
     (when id
       (setq item (plist-put item :id id))
       (setq item (plist-put item :heading heading))
-      (setq item (plist-put item :voice voice))
+      (setq item (plist-put item :speech (cc-english--get-speech-dir)))
+      (setq item (plist-put item :speech-start speech-start))
+      (setq item (plist-put item :speech-duration speech-duration))
       (setq item (plist-put item :trans trans))
       (push item cc-english--drill-queue))))
 
 
 
 ;;;
-;;; Make Lesson
+;;; Make Laishixiong Lesson
 ;;;
 
 (defun cc-english-sentence ()
@@ -330,9 +379,9 @@
   (let* ((heading (org-heading-components))
          (sid (org-entry-get (point) cc-english-custom-id)))
     (unless sid
-      (setq sid (cc-english--id-new "S" (nth 4 heading))))
-    (org-entry-put (point) cc-english-voice-start "00")
-    (org-entry-put (point) cc-english-voice-duration "00")))
+      (setq sid (cc-english--id-new "" (nth 4 heading))))
+    (org-entry-put (point) cc-english-speech-start "00")
+    (org-entry-put (point) cc-english-speech-duration "00")))
 
 (defun cc-english-sentence-all ()
   (interactive)
@@ -340,14 +389,164 @@
     (goto-char (point-min))
     (org-map-entries #'cc-english-sentence)))
 
-(defun cc-english-sentence-play ()
+(defun cc-english-sentence-play (&optional arg)
+  (interactive "P")
+  (let* ((speech-dir (cc-english--get-speech-dir cc-english-speech-re))
+         (speech-start (org-entry-get (point) cc-english-speech-start))
+         (speech-end (org-entry-get (point) cc-english-speech-duration))
+         (loop (prefix-numeric-value arg)))
+    (unless speech-dir
+      (error "no speech"))
+    (if (and arg (>= loop 1))
+        (call-process-shell-command (apply #'format "ffplay.exe -nodisp -noborder -autoexit -i \"%s\" -ss \"%s\" -t \"%s\" -loop %s" (list speech-dir speech-start speech-end loop)) nil 0)
+      (call-process-shell-command (apply #'format "ffplay.exe -nodisp -noborder -autoexit -i \"%s\" -ss \"%s\" -t \"%s\"" (list speech-dir speech-start speech-end)) nil 0))))
+
+
+(defun cc-english-explaination-play ()
   (interactive)
-  (let* ((voice-dir (cc-english--get-voice-dir))
-         (voice-start (org-entry-get (point) cc-english-voice-start))
-         (voice-end (org-entry-get (point) cc-english-voice-duration)))
-    (unless voice-dir
-      (error "no voice"))
-    (call-process-shell-command (apply #'format "ffplay.exe -nodisp -noborder -autoexit -i \"%s\" -ss \"%s\" -t \"%s\"" (list voice-dir voice-start voice-end)) nil 0)))
+  (let ((speech-dir (cc-english--get-speech-dir cc-english-explanation-re)))
+    (unless speech-dir
+      (error "no speech"))
+    (call-process-shell-command (apply #'format "vlc.exe --qt-start-minimized --play-and-exit --qt-notification=0 \"%s\"" (list speech-dir)))
+    ))
+
+
+(defun cc-english-sentence-word ()
+  (interactive)
+  (let* ((heading (org-heading-components))
+         (words (cc-english--split-sentence (nth 4 heading)))
+         (sid (org-entry-get (point) cc-english-custom-id)))
+    (unless sid
+      (error "sentence no custom id"))
+    (ivy-read "Choose a Word:" words
+              :action (lambda (w)
+                        (cc-english--link-create "" "WID" w (downcase w))
+                        ))))
+
+(defun cc-english-sentence-phrase ()
+  (interactive)
+  (let* ((heading (org-heading-components))
+         (words (cc-english--split-sentence (nth 4 heading)))
+         (sid (org-entry-get (point) cc-english-custom-id)))
+    (unless sid
+      (error "sentence no custom id"))
+    (ivy-read "Choose a phrase:" words
+              :action (lambda (w)
+                        (cc-english--link-create "" "PID" w (cc-english--id-gen "" w))
+                        ))))
+
+(defun cc-english-sentence-grammar ()
+  (interactive)
+  (let* ((heading (org-heading-components))
+         (words (cc-english--split-sentence (nth 4 heading)))
+         (sid (org-entry-get (point) cc-english-custom-id)))
+    (unless sid
+      (error "sentence no custom id"))
+    (ivy-read "Choose a grammar:" words
+              :action (lambda (w)
+                        (cc-english--link-create "" "GID" w (cc-english--id-gen "" w))
+                        ))))
+
+(global-set-key (kbd "C-c m s") 'cc-english-sentence)
+(global-set-key (kbd "C-c m a") 'cc-english-sentence-all)
+(global-set-key (kbd "C-c m w") 'cc-english-sentence-word)
+(global-set-key (kbd "C-c m h") 'cc-english-sentence-phrase)
+(global-set-key (kbd "C-c m g") 'cc-english-sentence-grammar)
+(global-set-key (kbd "C-c m p") 'cc-english-sentence-play)
+(global-set-key (kbd "C-c m e") 'cc-english-explaination-play)
+
+(defun cc-english--word-open (id)
+  (let* ((dir (concat cc-english-dir "/word"))
+         (sid (org-entry-get (point) cc-english-custom-id))
+         (sent (nth 4 (org-heading-components)))
+         (res (counsel-rg (concat "^\\*\\s" id) dir)))
+    (unless sid
+      (error "sentence no custom id"))
+
+    (when (string-equal res "No matches found")
+      (let ((buffer (find-file-noselect (concat dir "/word.org"))))
+        (with-current-buffer buffer
+          (goto-char (point-max))
+          (org-insert-heading nil nil t)
+          (insert id)
+          (org-insert-subheading nil)
+          (org-insert-subheading nil)
+          (insert sent)
+          (org-entry-put (point) "SID" (format "[[SID:%s]]" sid)))
+        (switch-to-buffer-other-window buffer)))))
+(org-link-set-parameters "WID" :follow #'cc-english--word-open)
+
+(defun cc-english--phrase-open (id)
+  (let* ((sid (org-entry-get (point) cc-english-custom-id))
+         (sent (nth 4 (org-heading-components)))
+         (pros (org-entry-properties))
+         (val (format "[[PID:%s]]" id))
+         (key)
+         (res (counsel-rg id (concat cc-english-dir "/phrase"))))
+    (unless sid
+      (error "sentence no custom id"))
+    (catch 'found
+      (dolist (item pros)
+        (when (equal val (cdr item))
+          (setq key (car item))
+          (throw 'found item))))
+    (unless key
+      (error "no phrase property"))
+
+    (when (string-equal res "No matches found")
+      (let ((buffer (find-file-noselect (concat cc-english-dir "/phrase/phrase.org"))))
+        (with-current-buffer buffer
+          (goto-char (point-max))
+          (org-insert-heading nil nil t)
+          (insert (downcase key))
+          (org-insert-subheading nil)
+          (insert sent)
+          (org-entry-put (point) "SID" (format "[[SID:%s]]" sid))
+          (org-up-heading-safe)
+          (org-entry-put (point) cc-english-custom-id id)
+          )
+        (switch-to-buffer-other-window buffer)))))
+(org-link-set-parameters "PID" :follow #'cc-english--phrase-open)
+
+(defun cc-english--gramma-open (id)
+  (let* ((sid (org-entry-get (point) cc-english-custom-id))
+         (sent (nth 4 (org-heading-components)))
+         (pros (org-entry-properties))
+         (val (format "[[GID:%s]]" id))
+         (key)
+         (res (counsel-rg id (concat cc-english-dir "/gramma"))))
+    (unless sid
+      (error "sentence no custom id"))
+    (catch 'found
+      (dolist (item pros)
+        (when (equal val (cdr item))
+          (setq key (car item))
+          (throw 'found item))))
+    (unless key
+      (error "no gramma property"))
+
+    (when (string-equal res "No matches found")
+      (let ((buffer (find-file-noselect (concat cc-english-dir "/gramma/gramma.org"))))
+        (with-current-buffer buffer
+          (goto-char (point-max))
+          (org-insert-heading nil nil t)
+          (insert (downcase key))
+          (org-insert-subheading nil)
+          (insert sent)
+          (org-entry-put (point) "SID" (format "[[SID:%s]]" sid))
+          (org-up-heading-safe)
+          (org-entry-put (point) "CUSTOM_ID" id))
+        (switch-to-buffer-other-window buffer)
+        ))))
+(org-link-set-parameters "GID" :follow #'cc-english--gramma-open)
+
+(defun cc-english--sentence-open (id)
+  (let (res)
+    (setq res (counsel-rg (concat "CUSTOM_ID:\\s+" id) cc-english-dir))
+    (if (string-equal res "No matches found")
+        (error "no sentence"))))
+(org-link-set-parameters "SID" :follow #'cc-english--sentence-open)
+
 
 
 ;; (defun cc-english-sentence-voice-extract()
@@ -371,322 +570,4 @@
 ;;   (save-excursion
 ;;     (goto-char (point-min))
 ;;     (org-map-entries #'cc-english-sentence-voice-extract)))
-
-
-(defun cc-english-sentence-word (&optional arg)
-  "create word link"
-  (interactive "P")
-  (let* ((heading (org-heading-components))
-         (words (cc-english--split-sentence (nth 4 heading)))
-         (sid (org-entry-get (point) "CUSTOM_ID"))
-         )
-    (unless sid
-      (cc-english--id-new "S" (nth 4 heading)))
-    (unless (equal arg '(16))
-      (ivy-read "Choose a Word:" words
-                :action (lambda (w)
-                          (cc-english--link-create "" "WID" w (downcase w))
-                          ))
-      )
-    ))
-
-(defun cc-english-sentence-phrase ()
-  "create phrase link"
-  (interactive)
-  (let* ((heading (org-heading-components))
-         (words (cc-english--split-sentence (nth 4 heading)))
-         (sid (org-entry-get (point) "CUSTOM_ID"))
-         )
-    (unless sid
-      (cc-english--id-new "S" (nth 4 heading)))
-    (ivy-read "Choose a phrase:" words
-              :action (lambda (w)
-                        (cc-english--link-create "" "PID" w (cc-english--id-gen "P" w))
-                        ))
-    ))
-
-(defun cc-english-sentence-grammar ()
-  "create grammar link"
-  (interactive)
-  (let* ((heading (org-heading-components))
-         (words (cc-english--split-sentence (nth 4 heading)))
-         (sid (org-entry-get (point) "CUSTOM_ID"))
-         )
-    (unless sid
-      (cc-english--id-new "S" (nth 4 heading)))
-    (ivy-read "Choose a grammar:" words
-              :action (lambda (w)
-                        (cc-english--link-create "" "GID" w (cc-english--id-gen "G" w))
-                        ))
-    ))
-
-
-(defun cc-english--word-open (id)
-  (let ((dir (concat cc-english-dir "/word")))
-    (unless dir
-      (error "no word dir found!!!"))
-    
-    (let* ((sid (org-entry-get (point) "CUSTOM_ID"))
-           (sent (nth 4 (org-heading-components)))
-           (res (counsel-rg (concat "^\\*\\s" id) dir))
-           )
-      (unless sid
-        (error "no sentence CUSTOME_ID!!!"))
-
-      (if (string-equal res "No matches found")
-          (progn
-            (let* ((cards (cc-english--get-card "WORD"))
-                  (cdir (concat cc-english-dir dir "/word/"))
-                  (default-directory (file-truename (expand-file-name dir)))
-                  )
-              (if (and cards (listp cards))
-                  (ivy-read "Choose Card:" cards
-                            :require-match t
-                            :action (lambda (card)
-                                      (let ((buffer (find-file-noselect (concat cdir card))))
-                                        (with-current-buffer buffer
-                                          (goto-char (point-max))
-                                          (org-insert-heading nil nil t)
-                                          (insert id)
-                                          (org-insert-subheading nil)
-                                          (org-insert-subheading nil)
-                                          (insert sent)
-                                          (org-entry-put (point) "SID" (format "[[SID:%s]]" sid))
-                                          (org-up-heading-safe)
-                                          (org-up-heading-safe)
-                                          (org-entry-put (point) "VOICE" (format "[[file:../voice/%s.mp3]]" id))
-                                          )
-                                        (switch-to-buffer-other-window buffer)
-                                        )))
-                (ivy-read "Choose Card:" #'read-file-name-internal
-                          :action (lambda (x)
-                                    (let ((buffer (find-file-noselect x)))
-                                    (with-current-buffer buffer
-                                      (goto-char (point-max))
-                                      (org-insert-heading nil nil t)
-                                      (insert id)
-                                      (org-insert-subheading nil)
-                                      (org-insert-subheading nil)
-                                      (insert sent)
-                                      (org-entry-put (point) "SID" (format "[[SID:%s]]" sid))
-                                      (org-up-heading-safe)
-                                      (org-up-heading-safe)
-                                      (org-entry-put (point) "VOICE" (format "[[file:../voice/%s.mp3]]" id))
-                                      )
-                                    (switch-to-buffer-other-window buffer)))))
-              ))))))
-(org-link-set-parameters "WID" :follow #'cc-english--word-open)
-
-(defun cc-english--phrase-open (id)
-  (let ((dir (cc-english--get-dir)))
-    (unless dir
-      (error "no english book dir found!!!"))
-    
-    (let* ((sid (org-entry-get (point) "CUSTOM_ID"))
-           (sent (nth 4 (org-heading-components)))
-           (pros (org-entry-properties))
-           (val (format "[[PID:%s]]" id))
-           (key)
-           (res (counsel-rg id (concat cc-english-dir dir "/phrase")))
-           )
-      (unless sid
-        (error "no sentence CUSTOME_ID!!!"))
-      (catch 'found
-        (dolist (item pros)
-          (when (equal val (cdr item))
-            (setq key (car item))
-            (throw 'found item)))
-        )
-      (unless key
-        (error "no phrase property"))
-
-      (if (string-equal res "No matches found")
-          (progn
-            (let* ((cards (cc-english--get-card "PHRASE"))
-                  (cdir (concat cc-english-dir dir "/phrase/"))
-                  (default-directory (file-truename (expand-file-name cdir))))
-              (if (and cards (listp cards))
-                  (ivy-read "Choose Card:" cards
-                            :require-match t
-                            :action (lambda (card)
-                                      (let ((buffer (find-file-noselect (concat cdir card))))
-                                        (with-current-buffer buffer
-                                          (goto-char (point-max))
-                                          (org-insert-heading nil nil t)
-                                          (insert (downcase key))
-                                          (org-insert-subheading nil)
-                                          (insert sent)
-                                          (org-entry-put (point) "SID" (format "[[SID:%s]]" sid))
-                                          (org-up-heading-safe)
-                                          (org-entry-put (point) "CUSTOM_ID" id)
-                                          )
-                                        (switch-to-buffer-other-window buffer)
-                                        )))
-                (ivy-read "Choose Card:" #'read-file-name-internal
-                        :action (lambda (card)
-                                  (let ((buffer (find-file-noselect card)))
-                                    (with-current-buffer buffer
-                                      (goto-char (point-max))
-                                          (org-insert-heading nil nil t)
-                                          (insert (downcase key))
-                                          (org-insert-subheading nil)
-                                          (insert sent)
-                                          (org-entry-put (point) "SID" (format "[[SID:%s]]" sid))
-                                          (org-up-heading-safe)
-                                          (org-entry-put (point) "CUSTOM_ID" id)
-                                          )
-                                    (switch-to-buffer-other-window buffer)
-                                    ))))
-              ))))))
-(org-link-set-parameters "PID" :follow #'cc-english--phrase-open)
-
-(defun cc-english--gramma-open (id)
-  (let ((dir (cc-english--get-dir)))
-    (unless dir
-      (error "no english book dir found!!!"))
-    
-    (let* ((sid (org-entry-get (point) "CUSTOM_ID"))
-           (sent (nth 4 (org-heading-components)))
-           (pros (org-entry-properties))
-           (val (format "[[GID:%s]]" id))
-           (key)
-           (res (counsel-rg id (concat cc-english-dir dir "/gramma")))
-           )
-      (unless sid
-        (error "no sentence CUSTOME_ID!!!"))
-      (catch 'found
-        (dolist (item pros)
-          (when (equal val (cdr item))
-            (setq key (car item))
-            (throw 'found item)))
-        )
-      (unless key
-        (error "no gramma property"))
-
-      (if (string-equal res "No matches found")
-          (progn
-            (let* ((cards (cc-english--get-card "GRAMMA"))
-                  (cdir (concat cc-english-dir dir "/gramma/"))
-                  (default-directory (file-truename (expand-file-name cdir))))
-              (if (and cards (listp cards))
-                  (ivy-read "Choose Card:" cards
-                            :require-match t
-                            :action (lambda (card)
-                                      (let ((buffer (find-file-noselect (concat cdir card))))
-                                        (with-current-buffer buffer
-                                          (goto-char (point-max))
-                                          (org-insert-heading nil nil t)
-                                          (insert (downcase key))
-                                          (org-insert-subheading nil)
-                                          (insert sent)
-                                          (org-entry-put (point) "SID" (format "[[SID:%s]]" sid))
-                                          (org-up-heading-safe)
-                                          (org-entry-put (point) "CUSTOM_ID" id)
-                                          )
-                                        (switch-to-buffer-other-window buffer)
-                                        )))
-                (ivy-read "Choose Card:" #'read-file-name-internal
-                        :action (lambda (card)
-                                  (let ((buffer (find-file-noselect card)))
-                                    (with-current-buffer buffer
-                                      (goto-char (point-max))
-                                          (org-insert-heading nil nil t)
-                                          (insert (downcase key))
-                                          (org-insert-subheading nil)
-                                          (insert sent)
-                                          (org-entry-put (point) "SID" (format "[[SID:%s]]" sid))
-                                          (org-up-heading-safe)
-                                          (org-entry-put (point) "CUSTOM_ID" id)
-                                          )
-                                    (switch-to-buffer-other-window buffer)
-                                    ))))
-              ))))))
-(org-link-set-parameters "GID" :follow #'cc-english--gramma-open)
-
-(defun cc-english--sentence-open (id)
-  (let ((dir (cc-english--get-dir))
-        res)
-    (unless dir
-      (error "no english book dir found!!!"))
-    
-    (setq res (counsel-rg (concat "CUSTOM_ID:\\s+" id) (concat cc-english-dir dir "/lession")))
-    (if (string-equal res "No matches found")
-        (error "no sentence"))))
-(org-link-set-parameters "SID" :follow #'cc-english--sentence-open)
-
-
-(defun cc-english--get-dir ()
-  (let ((dir)
-        dirl)
-    (save-excursion
-      (widen)
-      (goto-char (point-min))
-      (when (re-search-forward "^#\\+ENGLISHBOOK:" 100 t)
-        (setq dirl (ivy--split-spaces (buffer-substring (point) (line-end-position))))
-        (when (and dirl (listp dirl))
-          (setq dir (car dirl)))
-        ))
-    dir))
-
-(defun cc-english--get-voice-dir ()
-  (let ((dir)
-        dirl)
-    (save-excursion
-      (widen)
-      (goto-char (point-min))
-      (when (re-search-forward "^#\\+VOICE:" 200 t)
-        (setq dirl (ivy--split-spaces (buffer-substring-no-properties (point) (line-end-position))))
-        (when (and dirl (listp dirl))
-          (setq dir (car dirl))
-          (setq dir (concat cc-english-resource dir)))
-        ))
-    dir))
- 
-(defun cc-english--get-card (kind)
-  (let ((cards))
-    (save-excursion
-      (widen)
-      (goto-char (point-min))
-      (when (re-search-forward (concat "^#\\+ENGLISH" kind ":") 200 t)
-        (setq cards (ivy--split-spaces (buffer-substring (point) (line-end-position))))
-        ))
-    cards))
-
-(defun cc-english--link-create (prefix kind property id)
-  (org-entry-put (point) property (format "[[%s:%s%s]]" kind prefix id)))
-
-
-(defun cc-english--id-gen (prefix &optional content)
-  (let* ((id (or content ""))
-         (rnd (md5 (format "%s%s" (random) id)))
-         )
-    (format "%s%s" prefix rnd)
-    )
-  )
-
-(defun cc-english--id-new (prefix &optional content)
-  (let* ((id (or content ""))
-         (rnd (md5 (format "%s%s" (random) id)))
-         (cid (format "%s%s" prefix rnd))
-         )
-    (org-entry-put (point) "CUSTOM_ID" cid)
-    cid
-    ))
-
-(defun cc-english--split-sentence (str)
-  (let ((len (length str))
-        res
-        (i 0)
-        (j 0))
-    (while (and (string-match "[.,!? ]+" str i)
-                (< i len))
-      (if (>= (- (match-end 0) (match-beginning 0)) 1)
-          (progn
-            (push (substring str i (match-beginning 0)) res)
-            (setq i (match-end 0)))))
-    (when (< i len)
-      (push (substring str i len) res))
-    res))
-
-
 (provide 'setup-english)
