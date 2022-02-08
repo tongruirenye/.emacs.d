@@ -7,7 +7,7 @@
  '(org-modules
    '(ol-bbdb ol-bibtex ol-docview ol-eww ol-gnus org-habit ol-info ol-irc ol-mhe org-protocol ol-rmail ol-w3m))
  '(package-selected-packages
-   '(company-quickhelp treemacs emacsql-sqlite3 org-roam ace-window pretty-hydra company counsel all-the-icons find-file-in-project doom-modeline mwim ox-hugo yankpad org-edna shackle calfw-org calfw org-clock org-protocol avy which-key web-mode use-package simple-modeline request projectile popup org-super-agenda org-pomodoro org-drill org-brain neotree lsp-ui js2-refactor htmlize flycheck doom-themes dashboard counsel-etags company-web company-lsp company-go company-ctags)))
+   '(modern-cpp-font-lock citre company-quickhelp treemacs emacsql-sqlite3 org-roam ace-window pretty-hydra company counsel all-the-icons find-file-in-project doom-modeline mwim ox-hugo yankpad org-edna shackle calfw-org calfw org-clock org-protocol avy which-key web-mode use-package simple-modeline request projectile popup org-super-agenda org-pomodoro org-drill org-brain neotree lsp-ui js2-refactor htmlize flycheck doom-themes dashboard counsel-etags company-web company-lsp company-go company-ctags)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

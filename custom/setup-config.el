@@ -7,7 +7,7 @@
   :group 'convenience)
 
 
-(defcustom cc-org-dir "d:/mydata/org/"
+(defcustom cc-org-dir "/Users/huhong/Documents/mydata/org/"
   "CC org dir"
   :group 'cc
   :type 'string)
@@ -70,6 +70,10 @@
   (unless (file-directory-p user-emacs-directory)
     (message "no user emacs directory at :%s" user-emacs-directory))
   (cc-project-browse user-emacs-directory))
+
+
+(defun cc-termux-p ()
+  (and (equal (system-name) "localhost") (equal (string-match-p "u0_.*" (user-login-name)) 0)))
 
 
 (provide 'setup-config)

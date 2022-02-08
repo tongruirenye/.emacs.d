@@ -13,7 +13,7 @@
           :ensure t
           :defines company-box-icons-all-the-icons
           :hook (company-mode . company-box-mode)
-          :init (setq company-box-enable-icon centaur-icon
+          :init (setq company-box-enable-icon cc-use-all-the-icons
                       company-box-backends-colors nil
                       company-box-doc-delay 0.1)
           :config
@@ -180,7 +180,7 @@
                 (set-frame-size frame text-width text-height t)))
             (advice-add #'company-box-doc--set-frame-position :override #'my-company-box-doc--set-frame-position)
 
-            (when (icons-displayable-p)
+            (when cc-use-all-the-icons
               (setq company-box-icons-all-the-icons
                     `((Unknown . ,(all-the-icons-material "find_in_page" :height 1.0 :v-adjust -0.2))
                       (Text . ,(all-the-icons-faicon "text-width" :height 1.0 :v-adjust -0.02))

@@ -12,6 +12,10 @@
 (use-package protobuf-mode
   :ensure t)
 
+;; go
+(use-package go-mode
+  :ensure t)
+
 ;; citre
 (use-package citre
     :ensure t
@@ -43,6 +47,8 @@ Fallback to `xref-find-definitions'."
   :hook ((go-mode . (lambda ()
                       (lsp-deferred)
                       (add-hook 'before-save-hook #'lsp-organize-imports t t)))
+         (python-mode . (lambda ()
+                          (lsp-deferred)))
          (lsp-mode . (lambda ()
                        ;; Integrate `which-key'
                        (lsp-enable-which-key-integration)

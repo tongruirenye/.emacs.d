@@ -21,6 +21,7 @@
  visible-bell nil
  )
 
+;; setting
 (when *is-win*
   (setq w32-get-true-file-attributes nil   ; decrease file IO workload
         w32-pipe-read-delay 0              ; faster IPC

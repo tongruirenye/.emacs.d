@@ -9,7 +9,6 @@
          ("C-r" . swiper-isearch-backward)
          ("C-c C-r" . ivy-resume)
          ("M-x" . counsel-M-x)
-         ("C-c k" . counsel-rg)
          ("C-c b" . counsel-bookmark)
          ("C-c g" . counsel-git))
   :init
@@ -69,10 +68,16 @@
   :bind (([remap move-beginning-of-line] . mwim-beginning-of-code-or-line)
          ([remap move-end-of-line] . mwim-end-of-code-or-line)))
 
+
+;; color-rg
+(use-package color-rg
+  :load-path "~/.emacs.d/elpa/color-rg"
+  :bind (("C-c k c" . color-rg-search-input)
+         ("C-c k p" . color-rg-search-input-in-project)))
+
 ;; misc
 (setq make-backup-files nil)
 (prefer-coding-system 'utf-8-unix)
-(setq locale-coding-system 'utf-8-unix)
 (setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)
 
@@ -86,12 +91,10 @@
 
 (global-set-key (kbd "C-x l") 'cc-register-save)
 (global-set-key (kbd "C-x m") 'cc-register-jump)
+(global-set-key (kbd "C-l") 'set-mark-command)
 
-;; in WSL
+
 (when (not (display-graphic-p))
   (global-set-key (kbd "RET") 'newline-and-indent))
-
-(when (or *is-win* (not (display-graphic-p)))
-  (global-set-key (kbd "C-l") 'set-mark-command))
 
 (provide 'setup-edit)
