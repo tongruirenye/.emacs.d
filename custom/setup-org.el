@@ -35,7 +35,7 @@
         org-log-into-drawer t
         org-agenda-block-separator nil
         org-log-done 'time
-        org-deadline-warning-days 7
+        org-deadline-warning-days 1
         org-agenda-skip-scheduled-if-deadline-is-shown t
         org-archive-location (concat org-directory "archive/archive.org::* From %s")
         org-agenda-files (directory-files (concat cc-org-dir "roam/") t "20211215103549-项目计划.org")
@@ -50,7 +50,11 @@
         ))
 
 (defun cc-org-switch-to-state(&rest ignore)
-  (org-todo "SCHED"))
+  (let ((style (org-entry-get (point) "STYLE"))
+        (sche (org-entry-get (point) "SCHEDULED"))
+        (repeat (org-get-repeat)))
+    (if (and sche (and (not style) (not repeat)))
+        (org-todo "SCHED"))))
 
 (advice-add 'org-schedule :after #'cc-org-switch-to-state)
 
@@ -111,6 +115,21 @@ POS may also be a marker."
 	           (cc-remove-drawer-at (point)))))))))
   (org-save-all-org-buffers))
 
+(defun cc-clock-remove-all-clock-drawer ()
+  "Remove clock drawers in buffer."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (org-map-entries
+     (lambda ()
+       (let ((drawer (org-clock-drawer-name))
+	         (case-fold-search t))
+	     (when drawer
+	       (let ((re (format "^[ \t]*:%s:[ \t]*$" (regexp-quote drawer)))
+		         (end (save-excursion (outline-next-heading))))
+	         (while (re-search-forward re end t)
+	           (cc-remove-drawer-at (point)))))))))
+  (org-save-all-org-buffers))
 
 (defun cc-clock-in-hook ()
   (let ((pomo (or (org-entry-get-with-inheritance "POMO") "Focus...")))
@@ -177,7 +196,31 @@ POS may also be a marker."
   :hook ((org-clock-in . cc-clock-in-hook)
          (org-clock-out . cc-clock-out-hook))
   )
-;;(add-hook 'org-clock-out-hook 'cc-clock-out-hook)
+(add-hook 'org-clock-out-hook 'cc-clock-out-hook)
+
+(defun cc-org-todo-trigger-hook (list)
+  (when (equal "DONE" (plist-get list :to))
+    (let ((category (org-entry-get-with-inheritance "CATEGORY"))
+          (project (org-entry-get-with-inheritance "PROJECT"))
+          (level (nth 0 (org-heading-components)))
+          (s (org-copy-special))
+          (time (format-time-string "%H:%M ")))
+      (with-temp-buffer
+      (org-mode)
+      (yank)
+      (goto-char (point-min))
+      (org-entry-put (point) "KIND" category)
+      (org-entry-put (point) "PROJECT" project)
+      (while (> level 1)
+        (org-promote)
+        (setq level (1- level)))
+      (goto-char (point-min))
+      (delete-char 2)
+      (kill-ring-save (point-min) (point-max))
+      (cc-org-roam-dailies-capture-today)))
+    (org-save-all-org-buffers)))
+
+(add-hook 'org-trigger-hook #'cc-org-todo-trigger-hook)
 
 ;; yankpad
 (use-package yankpad
@@ -187,6 +230,19 @@ POS may also be a marker."
   (bind-key "<f11>" 'yankpad-map)
   (bind-key "<f12>" 'yankpad-expand)
   (setq yankpad-default-category "company"))
+
+
+;; rss
+(use-package elfeed
+  :ensure t)
+
+(use-package elfeed-org
+  :ensure t
+  :config
+  (elfeed-org)
+  (setq rmh-elfeed-org-files (list (concat cc-org-dir "roam/20220228220815-elfeed.org"))))
+
+(global-set-key (kbd "C-x w") 'elfeed)
 
 
 (provide 'setup-org)
