@@ -13,10 +13,11 @@
   :init
   (setq org-directory cc-org-dir)
   :config
-  ;;(add-hook 'org-agenda-mode-hook 'org-agenda-follow-mode)
-  (setq org-todo-keywords '((sequence "TODO(t)" "DOING(a)" "SCHED(s)" "LONG(l)" "WAITING(w@)" "|" "DONE(d)" "CANCEL(c@)")
-                            (type "QUESTION" "DISCUSSION" "THINKING" "DECISION" "ISSUE" "|" "DROP")
-          (type "GOAL" "POMO" "JOURNAL" "PROJ" "SUBJECT" "DOCUMENT" "INBOX" "|" "COMPLETE")))
+  (add-hook 'org-agenda-mode-hook 'org-agenda-follow-mode)
+  (setq org-todo-keywords '((sequence "TODO(t)" "DOING(a)" "SCHED(s)" "LONG(l)" "WAITING(w@)" "|" "DONE(d!)" "CANCEL(c@)")
+                            (type "QUESTION" "DISCUSSION" "THINKING" "DECISION" "ISSUE" "DOCUMENT" "|" "DROP")
+                            (type "POMO" "DIET" "JOURNAL" "|" "DATA")
+          (type "GOAL" "PROJ" "SUBJECT" "INBOX" "|" "COMPLETE")))
   (setq org-todo-keyword-faces
         '(("TODO" . "red")
           ("PROJ" . "blue")
@@ -76,7 +77,7 @@
         org-roam-dailies-directory "daily/")
   (setq org-roam-dailies-capture-templates
       '(("d" "default" entry
-         "* %?"
+         "* %<%H:%M> %?"
          :target (file+head "%<%Y-%m-%d>.org"
                             "#+title: %<%Y-%m-%d>\n"))))
   :config
@@ -112,8 +113,7 @@ POS may also be a marker."
 	       (let ((re (format "^[ \t]*:%s:[ \t]*$" (regexp-quote drawer)))
 		         (end (save-excursion (outline-next-heading))))
 	         (while (re-search-forward re end t)
-	           (cc-remove-drawer-at (point)))))))))
-  (org-save-all-org-buffers))
+	           (cc-remove-drawer-at (point))))))))))
 
 (defun cc-clock-remove-all-clock-drawer ()
   "Remove clock drawers in buffer."
@@ -123,6 +123,7 @@ POS may also be a marker."
     (org-map-entries
      (lambda ()
        (let ((drawer (org-clock-drawer-name))
+             (style (org-entry-get (point) "STYLE"))
 	         (case-fold-search t))
 	     (when drawer
 	       (let ((re (format "^[ \t]*:%s:[ \t]*$" (regexp-quote drawer)))
@@ -130,6 +131,13 @@ POS may also be a marker."
 	         (while (re-search-forward re end t)
 	           (cc-remove-drawer-at (point)))))))))
   (org-save-all-org-buffers))
+
+
+(defun org-reset-checkbox-state-maybe ()
+  "Reset all checkboxes in an entry if the `RESET_CHECK_BOXES' property is set"
+  (interactive "*")
+  (if (org-entry-get (point) "RESET_CHECK_BOXES")
+      (org-reset-checkbox-state-subtree)))
 
 (defun cc-clock-in-hook ()
   (let ((pomo (or (org-entry-get-with-inheritance "POMO") "Focus...")))
@@ -209,6 +217,7 @@ POS may also be a marker."
       (org-mode)
       (yank)
       (goto-char (point-min))
+      (cc-clock-remove-clock-drawer)
       (org-entry-put (point) "KIND" category)
       (org-entry-put (point) "PROJECT" project)
       (while (> level 1)
@@ -218,9 +227,37 @@ POS may also be a marker."
       (delete-char 2)
       (kill-ring-save (point-min) (point-max))
       (cc-org-roam-dailies-capture-today)))
+    (org-reset-checkbox-state-maybe)
     (org-save-all-org-buffers)))
 
 (add-hook 'org-trigger-hook #'cc-org-todo-trigger-hook)
+
+
+(defun cc-store-log ()
+  (let ((txt (buffer-string))
+        (i 0)
+        lines)
+    (with-temp-buffer
+      (org-mode)
+      (setq lines (org-split-string txt "\n"))
+      (print lines)
+      (insert (format-time-string "%H:%M "))
+      (dolist (line lines)
+        (if (= i 3)
+            (progn
+              (insert line)
+              (insert "\n")))
+        (when (> i 3)
+          (insert "  ")
+          (insert line)
+          (insert "\n"))
+        (setq i (1+ i)))
+      (goto-char (point-min))
+      (kill-ring-save (point-min) (point-max))
+      (cc-org-roam-dailies-capture-today)
+      )))
+
+(advice-add 'org-store-log-note :before #'cc-store-log)
 
 ;; yankpad
 (use-package yankpad
@@ -244,6 +281,9 @@ POS may also be a marker."
 
 (global-set-key (kbd "C-x w") 'elfeed)
 
+
+(use-package dirvish
+  :ensure t)
 
 (provide 'setup-org)
 
