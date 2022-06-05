@@ -16,7 +16,7 @@
   (add-hook 'org-agenda-mode-hook 'org-agenda-follow-mode)
   (setq org-todo-keywords '((sequence "TODO(t)" "DOING(a)" "SCHED(s)" "LONG(l)" "WAITING(w@)" "|" "DONE(d!)" "CANCEL(c@)")
                             (type "QUESTION" "DISCUSSION" "THINKING" "DECISION" "ISSUE" "DOCUMENT" "|" "DROP")
-                            (type "POMO" "DIET" "JOURNAL" "|" "DATA")
+                            (type "POMO" "DIET" "JOURNAL" "DATA" "|" "MARK")
           (type "GOAL" "PROJ" "SUBJECT" "INBOX" "|" "COMPLETE")))
   (setq org-todo-keyword-faces
         '(("TODO" . "red")
@@ -45,7 +45,7 @@
         org-refile-targets '((org-agenda-files . (:level . 1))
                              (org-agenda-files . (:todo . "SUBJECT")))
         org-clock-in-switch-to-state (lambda (s)
-                                       (if (or (equal s "TODO") (equal s "SCHED"))
+                                       (if (or (equal s "holder") (equal s "SCHED"))
                                            "DOING"
                                          nil))
         ))
@@ -210,6 +210,7 @@ POS may also be a marker."
   (when (equal "DONE" (plist-get list :to))
     (let ((category (org-entry-get-with-inheritance "CATEGORY"))
           (project (org-entry-get-with-inheritance "PROJECT"))
+          (style (org-entry-get (point) "STYLE"))
           (level (nth 0 (org-heading-components)))
           (s (org-copy-special))
           (time (format-time-string "%H:%M ")))
@@ -217,7 +218,8 @@ POS may also be a marker."
       (org-mode)
       (yank)
       (goto-char (point-min))
-      (cc-clock-remove-clock-drawer)
+      (when style
+        (cc-clock-remove-clock-drawer))
       (org-entry-put (point) "KIND" category)
       (org-entry-put (point) "PROJECT" project)
       (while (> level 1)
@@ -225,6 +227,8 @@ POS may also be a marker."
         (setq level (1- level)))
       (goto-char (point-min))
       (delete-char 2)
+      (when style
+        (replace-string "TODO" "MARK" nil 1 10))
       (kill-ring-save (point-min) (point-max))
       (cc-org-roam-dailies-capture-today)))
     (org-reset-checkbox-state-maybe)
@@ -241,24 +245,36 @@ POS may also be a marker."
       (with-temp-buffer
         (org-mode)
         (setq lines (org-split-string txt "\n"))
-        (print lines)
-        (insert (format-time-string "%H:%M "))
+        (if (string-equal (nth 3 lines) "")
+            (insert (format-time-string "%H:%M "))    
+          (insert (format "[[CID:%s][%s]] " (nth 3 lines) (format-time-string "%H:%M"))))
         (dolist (line lines)
-          (if (= i 3)
+          (if (= i 4)
               (progn
                 (insert line)
                 (insert "\n")))
-          (when (> i 3)
+          (when (> i 4)
             (insert "  ")
             (insert line)
             (insert "\n"))
           (setq i (1+ i)))
         (goto-char (point-min))
         (kill-ring-save (point-min) (point-max))
-        (cc-org-roam-dailies-capture-today)
-        ))))
+        (cc-org-roam-dailies-capture-today))
+      (org-save-all-org-buffers))))
+
+(defun cc-store-log-after ()
+  (org-save-all-org-buffers))
 
 (advice-add 'org-store-log-note :before #'cc-store-log)
+(advice-add 'org-store-log-note :after #'cc-store-log-after)
+
+(defun cc-org-add-note ()
+  (interactive)
+  (let ((cid (org-entry-get (point) "CUSTOM_ID")))
+    (if cid
+        (org-add-log-setup 'note nil nil nil (concat cid "\n"))
+      (org-add-log-setup 'note nil nil nil "\n"))))
 
 ;; yankpad
 (use-package yankpad

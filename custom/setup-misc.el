@@ -18,6 +18,24 @@
       (insert xyz))))
 
 
+(defun cc-filter-applebook-content ()
+  (interactive)
+  (let ((xyz "")
+        abc
+        def)
+    (setq abc (current-kill 0))
+    (setq def (split-string abc "\n"))
+    (if (eq 3 (length def))
+        (insert (nth 0 def))
+      (insert abc))))
+(global-set-key (kbd "C-c c") ' cc-filter-applebook-content)
+
+
+(defun cc-tid-get-create()
+  (interactive)
+  (org-entry-put (point) "TID" (org-id-new)))
+
+
 (defun cc-insert-recent-pic-link ()
   (interactive)
   (shell-command "powershell.exe C:\\Users\\Moon\\scoop\\shims\\listFile.ps1" t))
