@@ -38,7 +38,7 @@
 
 (defun cc-insert-recent-pic-link ()
   (interactive)
-  (shell-command "powershell.exe C:\\Users\\Moon\\scoop\\shims\\listFile.ps1" t))
+n  (shell-command "powershell.exe C:\\Users\\Moon\\scoop\\shims\\listFile.ps1" t))
 
 
 (defun cc-get-links (links)
@@ -125,5 +125,33 @@
         (org-mode)
         (org-refile-copy)
         (org-save-all-org-buffers)))))
+
+(use-package ts
+  :load-path "~/.emacs.d/elpa/ts.el"
+  )
+
+(use-package peg
+  :load-path "~/.emacs.d/elpa/peg.el"
+  )
+
+(use-package org-ql
+  :load-path "~/.emacs.d/elpa/org-ql"
+  )
+
+
+(use-package org-super-links
+  :load-path "~/.emacs.d/elpa/org-super-links"
+  :bind (("C-c s s" . org-super-links-link)
+         ("C-c s l" . org-super-links-store-link)
+         ("C-c s C-l" . org-super-links-insert-link)
+         ("C-c s d" . org-super-links-quick-insert-drawer-link)
+         ("C-c s i" . org-super-links-quick-insert-inline-link)
+         ("C-c s C-d" . org-super-links-delete-link))
+  :config
+  (setq org-super-links-related-into-drawer t
+  	    org-super-links-link-prefix 'org-super-links-link-prefix-timestamp))
+
+
+
 
 (provide 'setup-misc)

@@ -34,27 +34,21 @@
 
 ;; font
 (set-face-font 'default cc-default-font)
+
 (when *is-win*
   (dolist (charset '(kana han cjk-misc bopomofo))
     (set-fontset-font (frame-parameter nil 'font) charset
-                      (font-spec :family "微软雅黑" :size 20))))
+                      (font-spec :family "楷体" :size 20))))
+
+(when *is-mac*
+  (setq system-time-locale "zh_CN.UTF-8")
+  (set-fontset-font "fontset-default" 'unicode "Apple Color Emoji" nil 'prepend) 
+  (dolist (charset '(kana han cjk-misc bopomofo))
+    (set-fontset-font (frame-parameter nil 'font) charset
+                      (font-spec :family "Kaiti SC" :size 18))))
 
 
-;; dashbord
-(use-package dashboard
-  :ensure t
-  :init
-  (setq dashboard-banner-logo-title "Life Begins at the End of Your Comfort Zone"
-        dashboard-center-content t
-        dashboard-show-shortcuts nil
-        dashboard-items '((recents  . 5)
-                          (bookmarks . 5))
-        dashboard-set-footer t
-        dashboard-footer-icon ""
-        dashboard-footer-messages (list (format "Powered by ChenChao, %s" (format-time-string "%Y")))
-        )
-  :config
-  (dashboard-setup-startup-hook))
+(load-theme cc-theme t)
 
 ;; theme
 (use-package doom-themes
@@ -78,38 +72,46 @@
   :hook (after-init . doom-modeline-mode))
 
 
-;; treemacs
-(use-package treemacs
-  :ensure t
-  :commands (treemacs-follow-mode
-             treemacs-filewatch-mode
-             treemacs-fringe-indicator-mode
-             treemacs-git-mode)
-  :bind (([f8]        . treemacs)
-         ("M-0"       . treemacs-select-window)
-         ("C-x 1"     . treemacs-delete-other-windows)
-         ("C-x t 1"   . treemacs-delete-other-windows)
-         ("C-x t t"   . treemacs)
-         ("C-x t b"   . treemacs-bookmark)
-         ("C-x t C-t" . treemacs-find-file)
-         ("C-x t M-t" . treemacs-find-tag)
-         :map treemacs-mode-map
-         ([mouse-1]   . treemacs-single-click-expand-action))
-  :config
-  (setq treemacs-collapse-dirs           (if treemacs-python-executable 3 0)
-        treemacs-missing-project-action  'remove
-        treemacs-sorting                 'alphabetic-asc
-        treemacs-follow-after-init       t
-        treemacs-width                   30
-        treemacs-no-png-images           (not cc-use-all-the-icons))
-  :config
-  (treemacs-follow-mode t)
-  (treemacs-filewatch-mode t)
-  (pcase (cons (not (null (executable-find "git")))
-               (not (null (executable-find "python3"))))
-    (`(t . t)
-     (treemacs-git-mode 'deferred))
-    (`(t . _)
-     (treemacs-git-mode 'simple))))
+
+;; (use-package dirvish
+;;   :ensure t
+;;   :init
+;;   (dirvish-override-dired-mode)
+;;   :custom
+;;   (dirvish-quick-access-entries ; It's a custom option, `setq' won't work
+;;    '(("h" "~/"                          "Home")
+;;      ("d" "~/Downloads/"                "Downloads")
+;;      ("m" "/mnt/"                       "Drives")
+;;      ("t" "~/.local/share/Trash/files/" "TrashCan")))
+;;   :config
+;;   ;; (dirvish-peek-mode) ; Preview files in minibuffer
+;;   ;; (dirvish-side-follow-mode) ; similar to `treemacs-follow-mode'
+;;   (setq dirvish-mode-line-format
+;;         '(:left (sort symlink) :right (omit yank index)))
+;;   (setq dirvish-attributes
+;;         '(all-the-icons file-time file-size collapse subtree-state vc-state git-msg))
+;;   (setq delete-by-moving-to-trash t)
+;;   (setq dired-listing-switches
+;;         "-l --almost-all --human-readable --group-directories-first --no-group")
+;;   :bind ; Bind `dirvish|dirvish-side|dirvish-dwim' as you see fit
+;;   (("C-c f" . dirvish-fd)
+;;    :map dirvish-mode-map ; Dirvish inherits `dired-mode-map'
+;;    ("a"   . dirvish-quick-access)
+;;    ("f"   . dirvish-file-info-menu)
+;;    ("y"   . dirvish-yank-menu)
+;;    ("N"   . dirvish-narrow)
+;;    ("^"   . dirvish-history-last)
+;;    ("h"   . dirvish-history-jump) ; remapped `describe-mode'
+;;    ("s"   . dirvish-quicksort)    ; remapped `dired-sort-toggle-or-edit'
+;;    ("v"   . dirvish-vc-menu)      ; remapped `dired-view-file'
+;;    ("TAB" . dirvish-subtree-toggle)
+;;    ("M-f" . dirvish-history-go-forward)
+;;    ("M-b" . dirvish-history-go-backward)
+;;    ("M-l" . dirvish-ls-switches-menu)
+;;    ("M-m" . dirvish-mark-menu)
+;;    ("M-t" . dirvish-layout-toggle)
+;;    ("M-s" . dirvish-setup-menu)
+;;    ("M-e" . dirvish-emerge-menu)
+;;    ("M-j" . dirvish-fd-jump)))
 
 (provide 'setup-environment)

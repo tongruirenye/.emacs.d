@@ -136,6 +136,7 @@
 
 ;; Enforce rules for popups
 (use-package shackle
+  :ensure t
   :hook (after-init . shackle-mode)
   :init
   (setq shackle-default-size 0.4

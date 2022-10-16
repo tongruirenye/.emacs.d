@@ -3,12 +3,10 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(elfeed-curl-extra-arguments '("-k"))
- '(org-icalendar-alarm-time 10)
- '(org-modules
-   '(ol-bbdb ol-bibtex ol-docview ol-eww ol-gnus org-habit ol-info ol-irc ol-mhe org-protocol ol-rmail ol-w3m))
+ '(custom-safe-themes
+   '("afa47084cb0beb684281f480aa84dab7c9170b084423c7f87ba755b15f6776ef" "02f57ef0a20b7f61adce51445b68b2a7e832648ce2e7efb19d217b6454c1b644" default))
  '(package-selected-packages
-   '(dirvish elfeed-org elfeed modern-cpp-font-lock citre company-quickhelp treemacs emacsql-sqlite3 org-roam ace-window pretty-hydra company counsel all-the-icons find-file-in-project doom-modeline mwim ox-hugo yankpad org-edna shackle calfw-org calfw org-clock org-protocol avy which-key web-mode use-package simple-modeline request projectile popup org-super-agenda org-pomodoro org-drill org-brain neotree lsp-ui js2-refactor htmlize flycheck doom-themes dashboard counsel-etags company-web company-lsp company-go company-ctags)))
+   '(dirvish org shackle company which-key use-package treemacs pretty-hydra org-roam org-pomodoro mwim doom-themes doom-modeline dashboard counsel company-quickhelp all-the-icons)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

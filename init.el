@@ -31,3 +31,5 @@
   (require 'setup-programming))
 
 (setq gc-cons-threshold 4000000)
+
+;;(setq debug-on-error t)
