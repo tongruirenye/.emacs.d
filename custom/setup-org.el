@@ -13,8 +13,8 @@
   :init
   (setq org-directory cc-org-dir)
   :config
-  (setq org-todo-keywords '((sequence "INBOX(i)"  "TODO(t)" "REVIEW(r)" "|" "DONE(d!)")
-                            (type "JOURNAL" "SUBJECT" "GOAL" "CLIP" "ISSUE"  "|" "ARCH")))
+  (setq org-todo-keywords '((sequence "TODO(t)" "|" "DONE(d!)")
+                            (type "JOURNAL" "SUBJECT" "GOAL" "CLIP"  "INBOX(i)" "ISSUE"  "|" "ARCH")))
   (setq org-todo-keyword-faces
         '(("TODO" . "red")
           ("REVIEW" . "blue")
@@ -29,31 +29,36 @@
         org-deadline-warning-days 3
         org-agenda-skip-scheduled-if-deadline-is-shown t
         org-time-stamp-formats '("<%Y-%m-%d %A>" . "<%Y-%m-%d %A %H:%M>")
-        org-agenda-files (list (concat cc-org-dir "roam/daily/agenda.org"))
+        ;;org-agenda-files (list (concat cc-org-dir "roam/daily/agenda.org"))
         org-attach-dir-relative t
-        org-refile-targets '((org-agenda-files . (:tag . "project"))
-                             (nil . (:tag . "看板"))
-                             )
+        org-refile-targets '((nil . (:level . 1)))
         ))
 
-(defvar cc-agenda-log-file
-  (concat cc-org-dir "roam/daily/timelog.org"))
 
-(defun cc-org-mode-project-prompt ()
-    (completing-read
-     "项目: "
-	 (sort
-     (-distinct
-      (org-map-entries
-       (lambda ()
-	 (org-element-property :title (org-element-at-point)))
-       "+LEVEL=2+project"
-       'agenda))
-     #'string<)))
+;; org-journal
+(use-package org-journal
+  :ensure t
+  :init
+  ;; Change default prefix key; needs to be set before loading org-journal
+  (setq org-journal-prefix-key "C-c j ")
+  :config
+  (setq org-journal-dir (concat cc-org-dir "roam/daily/")
+        org-journal-enable-agenda-integration t
+        org-journal-file-type 'yearly
+        org-journal-date-format "%Y-%m-%d %A"))
+
+(defun cc-org-journal-find-location ()
+  ;; Open today's journal, but specify a non-nil prefix argument in order to
+  ;; inhibit inserting the heading; org-capture will insert the heading.
+  (org-journal-new-entry t)
+  (unless (eq org-journal-file-type 'daily)
+    (org-narrow-to-subtree))
+  (goto-char (point-max)))
+
 
 (defun cc-org-mode-todo-prompt ()
     (completing-read
-     "任务: "
+     "开始一个任务: "
 	 (sort
      (-distinct
       (org-map-entries
@@ -62,49 +67,20 @@
        "TODO=\"TODO\"|SCHEDULED=<today>"
        'agenda))
      #'string<)))
-
-(cl-defun cc-org-mode-find-project-node (&key
-					   (project (cc-org-mode-project-prompt))
-					   (within_headline (format-time-string "%Y-%m-%d %A")))
-    (with-current-buffer (find-file-noselect cc-agenda-log-file)
-      (let ((existing-position (org-element-map
-				   (org-element-parse-buffer)
-				   'headline
-				 (lambda (hl)
-				   (and (=(org-element-property :level hl) 4)
-					(string= project (plist-get (cadr hl) :raw-value))
-					(member "project" (org-element-property :tags hl))
-					(string= within_headline
-						 (plist-get
-						  (cadr (car (org-element-lineage hl))) :raw-value))
-					(org-element-property :end hl)))
-				 nil t)))
-	(if existing-position
-	    (goto-char existing-position)
-	  (progn
-	    (end-of-buffer)
-	    (insert (concat "\n**** " project " :project:\n\n")))))))
-
-(setq org-capture-templates
-      '(("p" "Project"
-	    entry (file+olp+datetree cc-agenda-log-file)
-	    "* %(cc-org-mode-project-prompt) :project:\n\n%?"
-	    :empty-lines-before 1
-	    :empty-lines-after 1)
-	  ("a" "Task"
-	   plain (file+function cc-agenda-log-file cc-org-mode-find-project-node)
-	   "***** %? :task:\n\n"
-	   :empty-lines-before 1
-	   :empty-lines-after 1
-       :clock-in t)
-      ("t" "Todo"
-	   plain (file+function cc-agenda-log-file cc-org-mode-find-project-node)
-	   "***** %(cc-org-mode-todo-prompt) :task:\n\n"
-	   :empty-lines-before 1
-	   :empty-lines-after 1
-       :clock-in t
-       :immediate-finish t)
-	  ))
+   
+(setq org-capture-templates '(("j" "Journal" plain (function cc-org-journal-find-location)
+                               "** %(format-time-string org-journal-time-format)%^{Title}\n%i%?"
+                               :jump-to-captured t :immediate-finish t)
+                              ("t" "Task" plain (function cc-org-journal-find-location)
+                               "** %(format-time-string org-journal-time-format)%(cc-org-mode-todo-prompt) :plan:\n%i%?"
+                               :clock-in t :immediate-finish t)
+                              ("a" "Adhoc" plain (function cc-org-journal-find-location)
+                               "** %(format-time-string org-journal-time-format)%^{Title} :adhoc:\n%i%?"
+                               :clock-in t :immediate-finish t)
+                              ("c" "Task" plain (clock)
+                               "*** %(format-time-string org-journal-time-format)%^{Title}\n%i%?"
+                               :immediate-finish t)
+                              ))
 
 ;; Roam
 (use-package org-roam
@@ -128,15 +104,15 @@
  (unless (file-exists-p org-roam-directory)
    (make-directory org-roam-directory)))
 
+
+(defun cc-clock-hook ()
+  (org-save-all-org-buffers))
+
 ;; pomodoro
 (use-package org-pomodoro
   :ensure t
-  :hook ((org-clock-in . (lambda () ((org-save-all-org-buffers))))
-         (org-clock-out . (lambda () ((org-save-all-org-buffers))))
-  ))
-
-(use-package eaf
-  :load-path "~/.emacs.d/elpa/emacs-application-framework")
+  :hook ((org-clock-in . cc-clock-hook)
+         (org-clock-out .cc-clock-hook)))
 
 (provide 'setup-org)
 
