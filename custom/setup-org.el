@@ -5,7 +5,7 @@
 (require 'setup-config)
 
 
-;; Org
+;; org
 (use-package org
   :ensure t
   :bind (("C-c a" . org-agenda)
@@ -14,7 +14,7 @@
   (setq org-directory cc-org-dir)
   :config
   (setq org-todo-keywords '((sequence "TODO(t)" "|" "DONE(d!)")
-                            (type "JOURNAL" "SUBJECT" "GOAL" "CLIP"  "INBOX(i)" "ISSUE"  "|" "ARCH")))
+                            (type "REVIEW" "SUBJECT" "GOAL" "CLIP" "INBOX(i)" "ISSUE" "|" "ARCH")))
   (setq org-todo-keyword-faces
         '(("TODO" . "red")
           ("REVIEW" . "blue")
@@ -29,9 +29,10 @@
         org-deadline-warning-days 3
         org-agenda-skip-scheduled-if-deadline-is-shown t
         org-time-stamp-formats '("<%Y-%m-%d %A>" . "<%Y-%m-%d %A %H:%M>")
-        ;;org-agenda-files (list (concat cc-org-dir "roam/daily/agenda.org"))
         org-attach-dir-relative t
-        org-refile-targets '((nil . (:level . 1)))
+        org-refile-targets '((nil . (:level . 1))
+                             (org-agenda-files . (:level . 1))
+                             )
         ))
 
 
@@ -39,10 +40,9 @@
 (use-package org-journal
   :ensure t
   :init
-  ;; Change default prefix key; needs to be set before loading org-journal
   (setq org-journal-prefix-key "C-c j ")
   :config
-  (setq org-journal-dir (concat cc-org-dir "roam/daily/")
+  (setq org-journal-dir (concat cc-org-dir "roam/agenda/")
         org-journal-enable-agenda-integration t
         org-journal-file-type 'yearly
         org-journal-date-format "%Y-%m-%d %A"))
@@ -71,13 +71,13 @@
 (setq org-capture-templates '(("j" "Journal" plain (function cc-org-journal-find-location)
                                "** %(format-time-string org-journal-time-format)%^{Title}\n%i%?"
                                :jump-to-captured t :immediate-finish t)
-                              ("t" "Task" plain (function cc-org-journal-find-location)
+                              ("p" "PlanTask" plain (function cc-org-journal-find-location)
                                "** %(format-time-string org-journal-time-format)%(cc-org-mode-todo-prompt) :plan:\n%i%?"
                                :clock-in t :immediate-finish t)
-                              ("a" "Adhoc" plain (function cc-org-journal-find-location)
+                              ("a" "AdhocTask" plain (function cc-org-journal-find-location)
                                "** %(format-time-string org-journal-time-format)%^{Title} :adhoc:\n%i%?"
                                :clock-in t :immediate-finish t)
-                              ("c" "Task" plain (clock)
+                              ("c" "ClockJournal" plain (clock)
                                "*** %(format-time-string org-journal-time-format)%^{Title}\n%i%?"
                                :immediate-finish t)
                               ))
@@ -94,10 +94,17 @@
         ("C-c n j" . org-roam-dailies-capture-today))
  :init
  (setq org-roam-directory (concat cc-org-dir "roam")
-       org-roam-v2-ack t
-       org-roam-dailies-directory "daily/")
+       org-roam-v2-ack t)
  (setq org-roam-capture-templates
        '(("d" "default" plain "%?" :target (file+head "${slug}.org" "#+title: ${title}\n#+time: %<%Y%m%d%H%M%S>")
+          :unnarrowed t)
+         ("b" "blog" plain "%?" :target (file+head "blog/${slug}.org" "#+title: ${title}\n#+time: %<%Y%m%d%H%M%S>")
+          :unnarrowed t)
+         ("a" "area" plain "%?" :target (file+head "area/${slug}.org" "#+title: ${title}\n#+time: %<%Y%m%d%H%M%S>")
+          :unnarrowed t)
+         ("p" "project" plain "%?" :target (file+head "project/${slug}.org" "#+title: ${title}\n#+time: %<%Y%m%d%H%M%S>")
+          :unnarrowed t)
+         ("r" "resource" plain "%?" :target (file+head "resource/${slug}.org" "#+title: ${title}\n#+time: %<%Y%m%d%H%M%S>")
           :unnarrowed t)
          ))
  :config
@@ -113,6 +120,25 @@
   :ensure t
   :hook ((org-clock-in . cc-clock-hook)
          (org-clock-out .cc-clock-hook)))
+
+
+;; cc
+(defun cc-refile ()
+  (interactive)
+  (let* ((title (nth 4 (org-heading-components)))
+         (id (org-entry-get (point) "ID"))
+         (link (format "[[id:%s][%s]]" id title)))
+    (cc-org-journal-find-location)
+    (org-insert-heading '(16))
+    (insert "TODO ")
+    (insert link)
+    (org-toggle-narrow-to-subtree)))
+
+
+(defun cc-org-done-hook (args)
+  (when (string-equal "DONE" (plist-get args :to))
+    (let ((org-trigger-hook nil))
+      ((cc-refile)))))
 
 (provide 'setup-org)
 
