@@ -26,7 +26,6 @@
   (setq w32-get-true-file-attributes nil   ; decrease file IO workload
         w32-pipe-read-delay 0              ; faster IPC
         w32-pipe-buffer-size (* 64 1024))) ; read more at a time (was 4K))
-
 ;; Increase how much is read from processes in a single chunk (default is 4kb)
 (setq read-process-output-max #x10000)  ; 64kb
 ;; Don't ping things that look like domain names
@@ -34,12 +33,13 @@
 
 ;; font
 (set-face-font 'default cc-default-font)
-
 (when *is-win*
+  (when (member "Segoe UI Emoji" (font-family-list))
+    (set-fontset-font
+     t 'symbol (font-spec :family "Segoe UI Emoji") nil 'prepend))
   (dolist (charset '(kana han cjk-misc bopomofo))
     (set-fontset-font (frame-parameter nil 'font) charset
-                      (font-spec :family "楷体" :size 20))))
-
+                      (font-spec :family "KaiTi" :size 22))))
 (when *is-mac*
   (setq system-time-locale "zh_CN.UTF-8")
   (set-fontset-font "fontset-default" 'unicode "Apple Color Emoji" nil 'prepend) 
@@ -47,8 +47,13 @@
     (set-fontset-font (frame-parameter nil 'font) charset
                       (font-spec :family "Kaiti SC" :size 18))))
 
-
-(load-theme cc-theme t)
+;; coding
+(prefer-coding-system 'utf-8-unix)
+(when *is-win*
+  (setq locale-coding-system 'gb18030)    ;此句保证中文字体设置有效
+  (setq w32-unicode-filenames 'nil)       ; 确保file-name-coding-system变量的设置不会无效
+  (setq file-name-coding-system 'gb18030) ; 设置文件名的编码为gb18030
+  )
 
 ;; theme
 (use-package doom-themes
@@ -56,7 +61,6 @@
   :config
   (load-theme cc-theme t)
   (doom-themes-visual-bell-config)
-  (doom-themes-treemacs-config)
   (doom-themes-org-config))
 
 ;; all-the-icons
@@ -72,46 +76,26 @@
   :hook (after-init . doom-modeline-mode))
 
 
+;; parrot
+(use-package parrot
+  :ensure t
+  :config
+  (parrot-mode))
 
-;; (use-package dirvish
-;;   :ensure t
-;;   :init
-;;   (dirvish-override-dired-mode)
-;;   :custom
-;;   (dirvish-quick-access-entries ; It's a custom option, `setq' won't work
-;;    '(("h" "~/"                          "Home")
-;;      ("d" "~/Downloads/"                "Downloads")
-;;      ("m" "/mnt/"                       "Drives")
-;;      ("t" "~/.local/share/Trash/files/" "TrashCan")))
-;;   :config
-;;   ;; (dirvish-peek-mode) ; Preview files in minibuffer
-;;   ;; (dirvish-side-follow-mode) ; similar to `treemacs-follow-mode'
-;;   (setq dirvish-mode-line-format
-;;         '(:left (sort symlink) :right (omit yank index)))
-;;   (setq dirvish-attributes
-;;         '(all-the-icons file-time file-size collapse subtree-state vc-state git-msg))
-;;   (setq delete-by-moving-to-trash t)
-;;   (setq dired-listing-switches
-;;         "-l --almost-all --human-readable --group-directories-first --no-group")
-;;   :bind ; Bind `dirvish|dirvish-side|dirvish-dwim' as you see fit
-;;   (("C-c f" . dirvish-fd)
-;;    :map dirvish-mode-map ; Dirvish inherits `dired-mode-map'
-;;    ("a"   . dirvish-quick-access)
-;;    ("f"   . dirvish-file-info-menu)
-;;    ("y"   . dirvish-yank-menu)
-;;    ("N"   . dirvish-narrow)
-;;    ("^"   . dirvish-history-last)
-;;    ("h"   . dirvish-history-jump) ; remapped `describe-mode'
-;;    ("s"   . dirvish-quicksort)    ; remapped `dired-sort-toggle-or-edit'
-;;    ("v"   . dirvish-vc-menu)      ; remapped `dired-view-file'
-;;    ("TAB" . dirvish-subtree-toggle)
-;;    ("M-f" . dirvish-history-go-forward)
-;;    ("M-b" . dirvish-history-go-backward)
-;;    ("M-l" . dirvish-ls-switches-menu)
-;;    ("M-m" . dirvish-mark-menu)
-;;    ("M-t" . dirvish-layout-toggle)
-;;    ("M-s" . dirvish-setup-menu)
-;;    ("M-e" . dirvish-emerge-menu)
-;;    ("M-j" . dirvish-fd-jump)))
+
+;; shell
+(use-package aweshell
+  :load-path "~/.emacs.d/elpa/aweshell")
+
+;; auto-save
+(use-package auto-save
+  :load-path "~/.emacs.d/elpa/auto-save"
+  :config
+  (setq auto-save-silent t)
+  (auto-save-enable))
+
+;; server-mode
+(server-mode 1)
+
 
 (provide 'setup-environment)
