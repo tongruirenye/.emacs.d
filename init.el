@@ -22,9 +22,9 @@
 (require 'setup-environment)
 (require 'setup-window)
 (require 'setup-edit)
-(require 'setup-company)
 
-(when (display-graphic-p)
+
+(when (and (display-graphic-p) (or *is-mac* *is-win*))
   (require 'setup-org))
 
 (when *is-linux*

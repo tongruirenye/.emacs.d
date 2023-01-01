@@ -7,18 +7,13 @@
   :group 'convenience)
 
 
-(defcustom cc-org-dir "/Users/huhong/Documents/mydata/org/"
+(defcustom cc-org-dir "D:/mydata/org/"
   "CC org dir"
   :group 'cc
   :type 'string)
 
 (defcustom cc-default-font "JetBrains Mono-13.0"
   "CC default font"
-  :group 'cc
-  :type 'string)
-
-(defcustom cc-shell-script-dir "c:/Users/Moon/scoop/shims/"
-  "CC shell script dir"
   :group 'cc
   :type 'string)
 
@@ -49,7 +44,7 @@
                       (list 'const :tag (symbol-name (car item)) (car item)))
                     cc-package-archives-list)))
 
-(defcustom cc-theme 'modus-operandi
+(defcustom cc-theme 'doom-one-light
   "CC theme"
   :group 'cc
   :type '(choice

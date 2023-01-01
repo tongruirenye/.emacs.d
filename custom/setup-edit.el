@@ -8,6 +8,7 @@
   :bind (("C-s" . swiper-isearch)
          ("C-r" . swiper-isearch-backward)
          ("C-c C-r" . ivy-resume)
+         ("C-c k" . counsel-rg)
          ("M-x" . counsel-M-x)
          ("C-c b" . counsel-bookmark)
          ("C-c g" . counsel-git))
@@ -20,7 +21,7 @@
 ;; avy
 (use-package avy
   :ensure t
-  :bind (("C-:" . avy-goto-char)
+  :bind (("C-:" . avy-goto-char-timer)
          ("C-'" . avy-goto-char-2)
          ("M-g f" . avy-goto-line)
          ("M-g w" . avy-goto-word-1)
@@ -69,9 +70,25 @@
          ([remap move-end-of-line] . mwim-end-of-code-or-line)))
 
 
+;; symbol-overlay
+(use-package symbol-overlay
+  :ensure t
+  :hook (after-init . symbol-overlay-mode)
+  :config
+  (global-set-key (kbd "M-i") 'symbol-overlay-put)
+  (global-set-key (kbd "M-n") 'symbol-overlay-switch-forward)
+  (global-set-key (kbd "M-p") 'symbol-overlay-switch-backward)
+  (global-set-key (kbd "<f7>") 'symbol-overlay-remove-all))
+
+
+;; company
+(use-package company
+  :ensure t
+  :hook (after-init . global-company-mode))
+
+
 ;; misc
 (setq make-backup-files nil)
-(prefer-coding-system 'utf-8-unix)
 (setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)
 

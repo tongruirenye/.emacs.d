@@ -5,21 +5,36 @@
 (require 'setup-config)
 
 
+(defun cc-clock-in-hook ()
+  (when *is-win*
+    (call-process-shell-command (apply #'format "MiniPomodoro.exe \"%s\"" (list "Focus")) nil 0))
+  (org-save-all-org-buffers))
+
+(defun cc-clock-hook ()
+  (org-save-all-org-buffers))
+
 ;; org
 (use-package org
   :ensure t
+  :hook ((org-clock-in . cc-clock-in-hook)
+         (org-clock-out . cc-clock-out-hook)
+         )
   :bind (("C-c a" . org-agenda)
          ("C-c c" . org-capture))
   :init
   (setq org-directory cc-org-dir)
   :config
-  (setq org-todo-keywords '((sequence "TODO(t)" "|" "DONE(d!)")
-                            (type "REVIEW" "SUBJECT" "GOAL" "CLIP" "INBOX(i)" "ISSUE" "|" "ARCH")))
+  (setq org-todo-keywords '((sequence "TODO(t)" "HIGHLIGHT(h)" "WAITING(w)"  "|" "CANCEL(c)" "DONE(d!)")
+                            (type "SUBJECT" "TASK" "MOTIVE" "GOAL" "KEYPOINT" "CLIP"  "ISSUE" "|" "INBOX")))
   (setq org-todo-keyword-faces
         '(("TODO" . "red")
-          ("REVIEW" . "blue")
-	      ("INBOX" . "spring green")
+          ("HIGHLIGHT" . "blue")
+          ("WAITING" . "purple")
+          ("TASK" . "blue")
+	      ("KEYPOINT" . "spring green")
+          ("MOTIVE" . "DeepPink")
 	      ("DONE" . "gray")))
+  (setq org-tag-alist '(("@office" . ?o) ("@home" . ?h) ("@metro" . ?l)))
   (setq org-use-fast-todo-selection t
         org-adapt-indentation t
         org-clock-into-drawer t
@@ -30,57 +45,16 @@
         org-agenda-skip-scheduled-if-deadline-is-shown t
         org-time-stamp-formats '("<%Y-%m-%d %A>" . "<%Y-%m-%d %A %H:%M>")
         org-attach-dir-relative t
-        org-refile-targets '((nil . (:level . 1))
-                             (org-agenda-files . (:level . 1))
+        org-agenda-files (directory-files (concat cc-org-dir "roam/project") t ".org")
+        org-refile-targets '(
+                             (org-agenda-files . (:tag . "#inbox"))
                              )
-        ))
-
-
-;; org-journal
-(use-package org-journal
-  :ensure t
-  :init
-  (setq org-journal-prefix-key "C-c j ")
-  :config
-  (setq org-journal-dir (concat cc-org-dir "roam/agenda/")
-        org-journal-enable-agenda-integration t
-        org-journal-file-type 'yearly
-        org-journal-date-format "%Y-%m-%d %A"))
-
-(defun cc-org-journal-find-location ()
-  ;; Open today's journal, but specify a non-nil prefix argument in order to
-  ;; inhibit inserting the heading; org-capture will insert the heading.
-  (org-journal-new-entry t)
-  (unless (eq org-journal-file-type 'daily)
-    (org-narrow-to-subtree))
-  (goto-char (point-max)))
-
-
-(defun cc-org-mode-todo-prompt ()
-    (completing-read
-     "开始一个任务: "
-	 (sort
-     (-distinct
-      (org-map-entries
-       (lambda ()
-	 (org-element-property :title (org-element-at-point)))
-       "TODO=\"TODO\"|SCHEDULED=<today>"
-       'agenda))
-     #'string<)))
-   
-(setq org-capture-templates '(("j" "Journal" plain (function cc-org-journal-find-location)
-                               "** %(format-time-string org-journal-time-format)%^{Title}\n%i%?"
-                               :jump-to-captured t :immediate-finish t)
-                              ("p" "PlanTask" plain (function cc-org-journal-find-location)
-                               "** %(format-time-string org-journal-time-format)%(cc-org-mode-todo-prompt) :plan:\n%i%?"
-                               :clock-in t :immediate-finish t)
-                              ("a" "AdhocTask" plain (function cc-org-journal-find-location)
-                               "** %(format-time-string org-journal-time-format)%^{Title} :adhoc:\n%i%?"
-                               :clock-in t :immediate-finish t)
-                              ("c" "ClockJournal" plain (clock)
-                               "*** %(format-time-string org-journal-time-format)%^{Title}\n%i%?"
-                               :immediate-finish t)
-                              ))
+        )
+  (setq org-capture-templates '(("c" "ClockNote" plain (clock)
+                                 "* %?"
+                                 :immediate-finish t)
+                                ))
+  )
 
 ;; Roam
 (use-package org-roam
@@ -95,6 +69,12 @@
  :init
  (setq org-roam-directory (concat cc-org-dir "roam")
        org-roam-v2-ack t)
+ (setq org-roam-dailies-directory "daily/")
+ (setq org-roam-dailies-capture-templates
+      '(("d" "default" entry
+         "* %?"
+         :target (file+head "%<%Y-%m-%d>.org"
+                            "#+title: %<%Y-%m-%d>\n"))))
  (setq org-roam-capture-templates
        '(("d" "default" plain "%?" :target (file+head "${slug}.org" "#+title: ${title}\n#+time: %<%Y%m%d%H%M%S>")
           :unnarrowed t)
@@ -112,33 +92,45 @@
    (make-directory org-roam-directory)))
 
 
-(defun cc-clock-hook ()
-  (org-save-all-org-buffers))
-
-;; pomodoro
-(use-package org-pomodoro
+(use-package org-super-agenda
   :ensure t
-  :hook ((org-clock-in . cc-clock-hook)
-         (org-clock-out .cc-clock-hook)))
+  :config
+  (org-super-agenda-mode)
+  (setq org-super-agenda-groups
+        '((:name "习惯"
+                 :habit t)
+          (:name "已过期"
+                 :scheduled past
+                 :deadline past)
+          (:name "今日"
+                 :time-grid t
+                 :scheduled today
+                 :deadline today)
+         (:name "等待..."
+                :todo "WAITING"
+                :order 98)
+         ))
+  (org-agenda nil "a"))
 
 
-;; cc
-(defun cc-refile ()
-  (interactive)
-  (let* ((title (nth 4 (org-heading-components)))
-         (id (org-entry-get (point) "ID"))
-         (link (format "[[id:%s][%s]]" id title)))
-    (cc-org-journal-find-location)
-    (org-insert-heading '(16))
-    (insert "TODO ")
-    (insert link)
-    (org-toggle-narrow-to-subtree)))
+(use-package plantuml-mode
+  :ensure t
+  :init
+  (setq org-plantuml-jar-path (expand-file-name (concat user-emacs-directory "misc/plantuml.jar")))
+  (setq plantuml-default-exec-mode 'jar)
+  (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
+  (org-babel-do-load-languages 'org-babel-load-languages '((plantuml . t))))
 
 
-(defun cc-org-done-hook (args)
-  (when (string-equal "DONE" (plist-get args :to))
-    (let ((org-trigger-hook nil))
-      ((cc-refile)))))
+(use-package org-roam-ui
+  :ensure t
+  :after org-roam
+  :config
+  (setq org-roam-ui-sync-theme t
+        org-roam-ui-follow t
+        org-roam-ui-update-on-save t
+        org-roam-ui-open-on-start t))
+
 
 (provide 'setup-org)
 
